@@ -38,6 +38,9 @@ dependencies {
     // Lombok
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
+
+    // Reactor Test (StepVerifier)
+    testImplementation 'io.projectreactor:reactor-test'
 }
 
 tasks.named('test') {
