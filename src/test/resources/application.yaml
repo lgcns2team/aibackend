@@ -1,0 +1,29 @@
+spring:
+  application:
+    name: haibackend-test
+
+  datasource:
+    url: jdbc:h2:mem:testdb
+    username: sa
+    password: 
+    driver-class-name: org.h2.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+    show-sql: true
+    open-in-view: false
+
+aws:
+  bedrock:
+    model:
+      chat: anthropic.claude-3-haiku-20240307-v1:0
+    knowledge-base:
+      id: test-kb-id
+      model-arn: arn:aws:bedrock:ap-northeast-2::foundation-model/anthropic.claude-3-haiku-20240307-v1:0
+
+server:
+  port: 8081

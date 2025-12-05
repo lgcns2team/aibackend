@@ -73,7 +73,7 @@ AWS_REGION=ap-northeast-2
 ### 1. 프로젝트 빌드
 
 ```bash
-./gradlew build
+./gradlew build -x test
 ```
 
 ### 2. 애플리케이션 실행
@@ -90,7 +90,7 @@ java -jar build/libs/haibackend-0.0.1-SNAPSHOT.jar
 
 ### 3. 서버 확인
 
-기본 포트: `http://localhost:8080`
+기본 포트: `http://localhost:8081'
 
 ## 📡 API 엔드포인트
 
@@ -200,13 +200,10 @@ dependencies {
 - **IDE**: IntelliJ IDEA 권장
 - **Database**: PostgreSQL 13 이상
 
-## 📄 라이선스
-
-이 프로젝트는 LG CNS의 소유입니다.
 
 ## 👥 기여
 
-LG CNS 2팀
+LG CNS AM INSPIRE 교육팀
 
 ---
 

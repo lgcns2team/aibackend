@@ -24,3 +24,6 @@ aws:
     knowledge-base:
       id: ${AWS_BEDROCK_KB_ID}
       model-arn: ${AWS_BEDROCK_KB_MODEL_ARN}
+
+server:
+  port: ${SERVER_PORT}
