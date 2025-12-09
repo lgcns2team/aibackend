@@ -17,6 +17,18 @@ spring:
     show-sql: true
     open-in-view: false
 
+  sql:
+    init:
+      mode: always
+      encoding: utf-8
+      data-locations: classpath:ai_person_data.sql 
+
+logging:
+  level:
+    org.springframework.jdbc.datasource.init: debug
+    org.hibernate.SQL: debug
+    org.hibernate.type.descriptor.sql.BasicBinder: trace
+
 aws:
   bedrock:
     model:
