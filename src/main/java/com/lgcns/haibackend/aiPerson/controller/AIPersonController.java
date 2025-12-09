@@ -4,9 +4,11 @@ import java.util.List;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.lgcns.haibackend.aiPerson.domain.dto.AIPersonDetailDTO;
 import com.lgcns.haibackend.aiPerson.domain.dto.AIPersonListDTO;
 import com.lgcns.haibackend.aiPerson.service.AIPersonService;
 
@@ -21,7 +23,13 @@ public class AIPersonController {
 
     @GetMapping
     public ResponseEntity<List<AIPersonListDTO>> getAllPersons() {
-        List<AIPersonListDTO> persons = aiPersonService.getAllPersons();
-        return ResponseEntity.ok(persons);
+        List<AIPersonListDTO> personList = aiPersonService.getAllPersons();
+        return ResponseEntity.ok(personList);
+    }
+
+    @GetMapping("/{promptId}")
+    public ResponseEntity<AIPersonDetailDTO> getPersonDetail(@PathVariable String promptId) {
+        AIPersonDetailDTO detail = aiPersonService.getPersonDetail(promptId);
+        return ResponseEntity.ok(detail);
     }
 }
