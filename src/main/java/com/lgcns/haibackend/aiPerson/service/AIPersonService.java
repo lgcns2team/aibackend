@@ -1,5 +1,6 @@
 package com.lgcns.haibackend.aiPerson.service;
 
+import java.util.Comparator;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -23,6 +24,7 @@ public class AIPersonService {
         return aiPersonRepository.findAll()
                 .stream()
                 .map(AIPersonListDTO::fromEntity)
+                .sorted(Comparator.comparing(AIPersonListDTO::getYear))
                 .toList();
     }
 
