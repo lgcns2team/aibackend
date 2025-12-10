@@ -12,6 +12,7 @@ import com.lgcns.haibackend.aiPerson.domain.dto.AIPersonDetailDTO;
 import com.lgcns.haibackend.aiPerson.domain.dto.AIPersonListDTO;
 import com.lgcns.haibackend.aiPerson.service.AIPersonService;
 
+import io.swagger.v3.oas.annotations.Parameter;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -28,8 +29,9 @@ public class AIPersonController {
     }
 
     @GetMapping("/{promptId}")
-    public ResponseEntity<AIPersonDetailDTO> getPersonDetail(@PathVariable String promptId) {
+    public ResponseEntity<AIPersonDetailDTO> getPersonDetail(@PathVariable("promptId") String promptId) {
         AIPersonDetailDTO detail = aiPersonService.getPersonDetail(promptId);
         return ResponseEntity.ok(detail);
     }
+
 }
