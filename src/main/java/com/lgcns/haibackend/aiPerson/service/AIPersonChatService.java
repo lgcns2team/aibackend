@@ -5,9 +5,9 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 
 import com.lgcns.haibackend.aiPerson.domain.dto.AIPersonDetailDTO;
-import com.lgcns.haibackend.aiPerson.redis.RedisChatRepository;
 import com.lgcns.haibackend.bedrock.client.Message;
 import com.lgcns.haibackend.bedrock.service.BedrockService;
+import com.lgcns.haibackend.common.redis.RedisChatRepository;
 
 import lombok.RequiredArgsConstructor;
 import reactor.core.publisher.Flux;

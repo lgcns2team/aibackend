@@ -1,4 +1,4 @@
-package com.lgcns.haibackend.aiPerson.redis;
+package com.lgcns.haibackend.common.redis;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -24,7 +24,7 @@ public class RedisChatRepository {
 
     private static final Duration DEFAULT_TTL = Duration.ofHours(6);
 
-    // 채팅 히스토리 전체 조회: List<Message>
+    // key에 해당하는 전체 메시지 히스토리 조회
     public List<Message> getMessages(String key) {
         List<String> rawList = redisTemplate.opsForList().range(key, 0, -1);
         if (rawList == null || rawList.isEmpty()) {
@@ -38,20 +38,26 @@ public class RedisChatRepository {
 
     // 메시지 1개 추가
     public void appendMessage(String key, Message message) {
+        appendMessage(key, message, DEFAULT_TTL);
+    }
+
+    // 메시지 1개 추가 (TTL 지정)
+    public void appendMessage(String key, Message message, Duration ttl) {
         String json = serialize(message);
         redisTemplate.opsForList().rightPush(key, json);
-        // TTL 갱신 (로그아웃으로 지우더라도, 혹시 로그아웃 안하고 오래 방치되는 경우를 위해)
-        redisTemplate.expire(key, DEFAULT_TTL);
+        if (ttl != null) {
+            redisTemplate.expire(key, ttl);
+        }
     }
 
     // 특정 key의 히스토리 삭제
-    public void deleteHistory(String key) {
+    public void deleteByKey(String key) {
         redisTemplate.delete(key);
     }
 
-    // userId 기준으로 모든 AIPerson 히스토리 삭제
-    public void deleteAllByUserId(Long userId) {
-        String pattern = "aiperson:chat:*:" + userId;
+    // 패턴으로 여러 키 삭제
+    // pattern = aiperson:chat:*:1
+    public void deleteByPattern(String pattern) {
         Set<String> keys = redisTemplate.keys(pattern);
         if (keys != null && !keys.isEmpty()) {
             redisTemplate.delete(keys);
