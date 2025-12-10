@@ -87,15 +87,6 @@ public class AIPersonChatService {
           .append("라면 대답할 법한 방식으로, 친절하고 이해하기 쉽게 한국어로 설명하세요. ")
           .append("역사적 사실이나 맥락이 애매한 경우에는 추측이라고 분명히 밝혀주세요.");
 
-        // greetingMessage 는 채팅창 첫 메시지/프론트에서 주로 쓰일 테니,
-        // system prompt에 굳이 넣지 않아도 됨. 넣고 싶으면 아래처럼 추가 가능:
-        /*
-        if (person.getGreetingMessage() != null && !person.getGreetingMessage().isBlank()) {
-            sb.append(" 대화를 시작할 때는 다음과 같은 분위기로 응답을 시작해도 좋습니다: ")
-              .append(person.getGreetingMessage());
-        }
-        */
-
         return sb.toString();
     }
 }

@@ -36,12 +36,19 @@ logging:
     org.hibernate.type.descriptor.sql.BasicBinder: trace
 
 aws:
+  credentials:
+    access-key-id: ${AWS_ACCESS_KEY_ID}
+    secret-access-key: ${AWS_SECRET_ACCESS_KEY}
+  region: ${CLOUD_AWS_REGION:ap-northeast-2}
   bedrock:
     model:
       chat: ${AWS_BEDROCK_CHAT_MODEL:anthropic.claude-3-haiku-20240307-v1:0}
     knowledge-base:
       id: ${AWS_BEDROCK_KB_ID}
       model-arn: ${AWS_BEDROCK_KB_MODEL_ARN}
+
+fastapi:
+  base-url: ${FASTAPI_BASE_URL:http://localhost:8000}
 
 server:
   port: ${SERVER_PORT}
