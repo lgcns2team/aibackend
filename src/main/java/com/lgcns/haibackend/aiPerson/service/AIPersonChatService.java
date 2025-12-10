@@ -5,9 +5,9 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 
 import com.lgcns.haibackend.aiPerson.domain.dto.AIPersonDetailDTO;
-import com.lgcns.haibackend.aiPerson.redis.RedisChatRepository;
 import com.lgcns.haibackend.bedrock.client.Message;
 import com.lgcns.haibackend.bedrock.service.BedrockService;
+import com.lgcns.haibackend.common.redis.RedisChatRepository;
 
 import lombok.RequiredArgsConstructor;
 import reactor.core.publisher.Flux;
@@ -26,7 +26,7 @@ public class AIPersonChatService {
         AIPersonDetailDTO person = aiPersonService.getPersonDetail(promptId);
 
         // 2) Redis에서 과거 히스토리 조회
-        String historyKey = buildHistoryKey(promptId, userId);
+        String historyKey = buildAIPersonKey(promptId, userId);
         List<Message> history = redisChatRepository.getMessages(historyKey);
 
         // 3) 이번 user 메시지 추가
@@ -58,7 +58,7 @@ public class AIPersonChatService {
                 });
     }
 
-    private String buildHistoryKey(String promptId, Long userId) {
+    private String buildAIPersonKey(String promptId, Long userId) {
         return "aiperson:chat:" + promptId + ":" + userId;
     }
 
@@ -86,6 +86,7 @@ public class AIPersonChatService {
           .append(person.getName())
           .append("라면 대답할 법한 방식으로, 친절하고 이해하기 쉽게 한국어로 설명하세요. ")
           .append("역사적 사실이나 맥락이 애매한 경우에는 추측이라고 분명히 밝혀주세요.");
+
 
         return sb.toString();
     }
