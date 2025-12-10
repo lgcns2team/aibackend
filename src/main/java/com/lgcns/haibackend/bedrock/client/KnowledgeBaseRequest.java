@@ -1,5 +1,7 @@
 package com.lgcns.haibackend.bedrock.client;
 
+import java.util.List;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -16,7 +18,10 @@ public class KnowledgeBaseRequest {
     private String query;
     private String kbId;
     private String modelArn;
-
+    
     @Builder.Default
     private Integer maxResults = 5;
+
+    // 대화 기록을 담을 필드
+    private List<Message> history;
 }

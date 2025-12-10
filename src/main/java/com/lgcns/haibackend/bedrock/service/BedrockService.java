@@ -52,27 +52,27 @@ public class BedrockService {
         
         log.info("[RAG] Starting RAG stream for UserID: {}", userId);
 
-        // 1. 사용자 메시지를 Redis에 먼저 저장 (History Append - User Message)
-        Message userMessage = Message.user(query);
-        redisChatRepository.appendMessage(redisKey, userMessage); // Blocking I/O 발생 가능, 비동기 처리가 필요할 경우 Mono/Flux로 변경해야 함
-
-        // 2. 대화 기록(History) 불러오기 (Redis)
+        // 1. 대화 기록(History) 불러오기 (Redis)
         // KnowledgeBaseRequest DTO에 History 필드가 있다면 여기서 History를 가져와야 합니다.
         List<Message> history = redisChatRepository.getMessages(redisKey);
-        
+        log.debug("[RAG] Loaded History Size: {}", history.size());
         // **[주의사항]** 현재 KnowledgeBaseRequest DTO에 History 필드가 없는 것으로 보입니다.
         // History를 RAG에 사용하려면 DTO를 수정해야 합니다. (이 예시에서는 History를 사용한다고 가정)
 
+        // 2. 사용자 메시지를 Redis에 먼저 저장 (History Append - User Message)
+        Message userMessage = Message.user(query);
+        redisChatRepository.appendMessage(redisKey, userMessage); // Blocking I/O 발생 가능, 비동기 처리가 필요할 경우 Mono/Flux로 변경해야 함
+
+        // 3. KnowledgeBaseRequest에 History 포함하여 요청 생성
         KnowledgeBaseRequest request = KnowledgeBaseRequest.builder()
                 .query(query)
                 .kbId(knowledgeBaseId)
                 .modelArn(knowledgeBaseModelArn)
-                // .history(history) // DTO에 따라 주석 해제하거나 로직 추가
+                .history(history) // DTO에 따라 주석 해제하거나 로직 추가
                 .build();
 
-        // 3. FastAPI 호출 (응답 스트림)
+        // 4. FastAPI 호출 (응답 스트림)
         return fastApiClient.retrieveFromKnowledgeBaseStream(request)
-                // 4. Flux를 Mono<String> (전체 응답)으로 합치기
                 .collect(Collectors.joining())
                 // 5. 응답 완료 후 로직 수행 (History Append - AI Message)
                 .doOnSuccess(fullResponse -> {
