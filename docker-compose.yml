@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: haibackend-redis
+    ports:
+      - "6379:6379"     # 호스트 6379 → 컨테이너 6379
+    volumes:
+      - ./data/redis:/data
+    restart: unless-stopped

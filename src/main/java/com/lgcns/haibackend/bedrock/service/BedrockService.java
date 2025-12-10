@@ -24,6 +24,9 @@ public class BedrockService {
         @Value("${aws.bedrock.knowledge-base.model-arn}")
         private String knowledgeBaseModelArn;
 
+        @Value("${aws.bedrock.model.chat}")
+        private String chatModelName;
+
         private final FastApiClient fastApiClient;
 
         /**
@@ -58,4 +61,30 @@ public class BedrockService {
         public boolean isServiceAvailable() {
                 return fastApiClient.isHealthy();
         }
+
+        // public Flux<String> chatWithHistory(String systemPrompt, List<Message> history) {
+
+        //         ChatRequest request = ChatRequest.builder()
+        //                 .model(chatModelName) // 사용할 Bedrock 모델 ID
+        //                 .system(systemPrompt) // 시스템 프롬프트
+        //                 .stream(true)         // SSE 스트리밍
+        //                 .messages(history)    // 전체 대화 히스토리
+        //                 .build();
+
+        //         return fastApiClient.chatStream(request)
+        //                 .doOnSubscribe(s ->
+        //                         log.info("[AIPERSON CHAT] model={}, historySize={}", chatModelName, history.size()))
+        //                 .doOnError(e ->
+        //                         log.error("[AIPERSON CHAT ERROR] {}", e.getMessage()));
+        // }
+
+        // BedrockService에 임시 구현
+        public Flux<String> chatWithHistory(String systemPrompt, List<Message> history) {
+                log.info("[DUMMY CHAT] systemPrompt={}", systemPrompt);
+                history.forEach(m -> log.info("history: {} - {}", m.getRole(), m.getContent()));
+
+                // 테스트용 텍스트만 스트리밍
+                return Flux.just("더미 응답입니다. systemPrompt 길이=" + systemPrompt.length());
+        }
+
 }
