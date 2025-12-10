@@ -28,7 +28,7 @@ public class AIPersonController {
     }
 
     @GetMapping("/{promptId}")
-    public ResponseEntity<AIPersonDetailDTO> getPersonDetail(@PathVariable String promptId) {
+    public ResponseEntity<AIPersonDetailDTO> getPersonDetail(@PathVariable("promptId") String promptId) {
         AIPersonDetailDTO detail = aiPersonService.getPersonDetail(promptId);
         return ResponseEntity.ok(detail);
     }
