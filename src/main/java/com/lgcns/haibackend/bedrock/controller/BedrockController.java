@@ -31,15 +31,15 @@ public class BedrockController {
     @PostMapping(value = "/chat", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<String> chat(@RequestBody ChatInput input) {
         log.info("===========================================");
-        log.info("📥 [CHAT REQUEST] Query: {}", input.getMessage());
+        log.info("[CHAT REQUEST] UserID: {}, Query: {}", input.getUserId(), input.getMessage());
         log.info("===========================================");
 
-        return bedrockService.retrieveFromKnowledgeBase(input.getMessage())
+        return bedrockService.retrieveFromKnowledgeBase(input.getMessage(), input.getUserId())
                 .doOnSubscribe(subscription -> {
-                    log.info("🚀 [KB SEARCH] Starting Knowledge Base search...");
+                    log.info("[KB SEARCH] Starting Knowledge Base search...");
                 })
                 .doOnSubscribe(subscription -> {
-                    log.info("🚀 [KB SEARCH] Starting Knowledge Base search...");
+                    log.info("[KB SEARCH] Starting Knowledge Base search...");
                 })
                 .map(chunk -> {
                     // JSON 래핑: {"type": "content", "text": "..."}
@@ -49,14 +49,14 @@ public class BedrockController {
                 })
                 .doOnNext(chunk -> {
                     // 스트리밍 청크마다 로그
-                    log.info("📦 [SENDING CHUNK] {}", chunk.substring(0, Math.min(100, chunk.length())));
+                    log.info("[SENDING CHUNK] {}", chunk.substring(0, Math.min(100, chunk.length())));
                 })
                 .doOnComplete(() -> {
-                    log.info("✅ [KB SEARCH] Knowledge Base search completed successfully");
+                    log.info("[KB SEARCH] Knowledge Base search completed successfully");
                     log.info("===========================================");
                 })
                 .doOnError(error -> {
-                    log.error("❌ [KB SEARCH ERROR] {}", error.getMessage());
+                    log.error("[KB SEARCH ERROR] {}", error.getMessage());
                     log.error("===========================================", error);
                 })
                 .onErrorResume(error -> {
@@ -70,14 +70,14 @@ public class BedrockController {
      */
     @GetMapping("/models")
     public ResponseEntity<List<Model>> getModels() {
-        log.info("📥 [MODELS] Fetching available models");
+        log.info("[MODELS] Fetching available models");
 
         try {
             List<Model> models = bedrockService.getAvailableModels();
-            log.info("✅ [MODELS] Found {} models", models.size());
+            log.info("[MODELS] Found {} models", models.size());
             return ResponseEntity.ok(models);
         } catch (Exception e) {
-            log.error("❌ [MODELS ERROR] {}", e.getMessage());
+            log.error("[MODELS ERROR] {}", e.getMessage());
             throw e;
         }
     }
@@ -87,12 +87,11 @@ public class BedrockController {
      */
     @GetMapping("/health")
     public ResponseEntity<Map<String, Object>> healthCheck() {
-        log.info("📥 [HEALTH] Checking service health");
+        log.info("[HEALTH] Checking service health");
 
         boolean isHealthy = bedrockService.isServiceAvailable();
 
-        log.info("✅ [HEALTH] Status: {}", isHealthy ? "healthy" : "unhealthy");
-
+        log.info("[HEALTH] Status: {}", isHealthy ? "healthy" : "unhealthy");
         return ResponseEntity.ok(Map.of(
                 "status", isHealthy ? "healthy" : "unhealthy",
                 "fastapi_gateway", isHealthy ? "connected" : "disconnected"));
@@ -102,6 +101,7 @@ public class BedrockController {
 
     @Data
     public static class ChatInput {
+        private Long userId;
         private String message;
     }
 }
