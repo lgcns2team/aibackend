@@ -16,30 +16,20 @@ public class AIPersonChatController {
 
     private final AIPersonChatService aiPersonChatService;
 
-    /**
-     * AI 인물과의 채팅 (SSE 스트리밍)
-     *
-     * 예시 호출:
-     * POST /api/ai-person/sejong/chat?userId=1
-     * Body: { "message": "안녕하세요, 세종대왕님?" }
-     */
+    // AI 인물 채팅
     @PostMapping(
         value = "/{promptId}/chat",
         produces = MediaType.TEXT_EVENT_STREAM_VALUE
     )
     public Flux<String> chatWithPerson(
             @PathVariable("promptId") String promptId,
-            @RequestParam("userId") Long userId,           // 우선은 쿼리 파라미터로 userId 전달
-            @RequestBody AIPersonChatRequest request      // 프론트에서 오는 요청 바디
+            @RequestParam("userId") Long userId,
+            @RequestBody AIPersonChatRequest request
     ) {
         return aiPersonChatService.chat(promptId, userId, request.getMessage());
     }
 
-    /**
-     * 프론트 → 백엔드로 들어오는 요청 DTO
-     * Bedrock용 ChatRequest(com.lgcns.haibackend.bedrock.client.ChatRequest)와
-     * 이름이 겹치지 않도록 별도 이름 사용
-     */
+    // Bedrock용 ChatRequest
     @Data
     public static class AIPersonChatRequest {
         private String message;
