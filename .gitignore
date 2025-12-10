@@ -40,3 +40,6 @@ out/
 .git_backup_*
 
 .env
+
+hs_err_pid*.log
+replay_pid*.log

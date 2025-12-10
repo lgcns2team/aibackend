@@ -59,6 +59,13 @@ public class FastApiClient {
     public Flux<String> chatStream(ChatRequest request) {
         request.setStream(true);
 
+        try {
+            String json = objectMapper.writeValueAsString(request);
+            log.info("[FASTAPI CHAT REQUEST] {}", json);
+        } catch (Exception e) {
+            log.warn("Failed to log chat request", e);
+        }
+
         return webClient.post()
                 .uri(baseUrl + "/chat")
                 .bodyValue(request)

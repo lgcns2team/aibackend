@@ -15,6 +15,7 @@ public class AIPersonDetailDTO {
     private String summary;
     private String exQuestion;
     private String greetingMessage;
+    private String era;
 
     public static AIPersonDetailDTO fromEntity(AIPersonEntity aiPerson) {
         return AIPersonDetailDTO.builder()
