@@ -1,4 +1,4 @@
-package com.lgcns.haibackend.bedrock.config;
+package com.lgcns.haibackend.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.channel.ChannelOption;
