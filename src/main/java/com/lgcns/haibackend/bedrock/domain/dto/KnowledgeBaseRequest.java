@@ -1,4 +1,4 @@
-package com.lgcns.haibackend.bedrock.client;
+package com.lgcns.haibackend.bedrock.domain.dto;
 
 import java.util.List;
 
@@ -23,5 +23,5 @@ public class KnowledgeBaseRequest {
     private Integer maxResults = 5;
 
     // 대화 기록을 담을 필드
-    private List<Message> history;
+    // private List<Message> history;
 }

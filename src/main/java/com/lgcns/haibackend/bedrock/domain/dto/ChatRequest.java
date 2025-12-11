@@ -1,6 +1,7 @@
-package com.lgcns.haibackend.bedrock.client;
+package com.lgcns.haibackend.bedrock.domain.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -20,7 +21,7 @@ public class ChatRequest {
     @Builder.Default
     private String model = "claude-3-5-sonnet";
 
-    private List<Message> messages;
+    private List<MessageDTO> messages;
 
     private String system;
 

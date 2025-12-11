@@ -1,6 +1,5 @@
 package com.lgcns.haibackend.bedrock.controller;
 
-import com.lgcns.haibackend.bedrock.client.Model;
 import com.lgcns.haibackend.bedrock.service.BedrockService;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -65,22 +64,6 @@ public class BedrockController {
                 });
     }
 
-    /**
-     * 사용 가능한 모델 목록
-     */
-    @GetMapping("/models")
-    public ResponseEntity<List<Model>> getModels() {
-        log.info("[MODELS] Fetching available models");
-
-        try {
-            List<Model> models = bedrockService.getAvailableModels();
-            log.info("[MODELS] Found {} models", models.size());
-            return ResponseEntity.ok(models);
-        } catch (Exception e) {
-            log.error("[MODELS ERROR] {}", e.getMessage());
-            throw e;
-        }
-    }
 
     /**
      * 헬스 체크
