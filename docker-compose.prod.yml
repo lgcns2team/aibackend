@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  # Spring Boot Application (AWS RDS 연결)
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: haibackend-app
+    environment:
+      # Database Configuration (AWS RDS 연결)
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+      
+      # AWS Bedrock Configuration
+      AWS_BEDROCK_KB_ID: ${AWS_BEDROCK_KB_ID}
+      AWS_BEDROCK_KB_MODEL_ARN: ${AWS_BEDROCK_KB_MODEL_ARN}
+      CLOUD_AWS_REGION: ${CLOUD_AWS_REGION:-ap-northeast-2}
+      
+      # AWS Credentials
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      
+      # Server Configuration
+      SERVER_PORT: 8081
+    ports:
+      - "8081:8081"
+    restart: unless-stopped

@@ -92,6 +92,57 @@ java -jar build/libs/haibackend-0.0.1-SNAPSHOT.jar
 
 기본 포트: `http://localhost:8081'
 
+## 🐳 Docker로 실행하기
+
+### 시나리오 1: 로컬 개발 (PostgreSQL 포함)
+
+PostgreSQL과 Spring Boot 애플리케이션을 함께 실행:
+
+```bash
+# .env 파일이 준비되어 있는지 확인 후 실행
+docker-compose up -d
+```
+
+**서비스 중지**:
+```bash
+docker-compose down
+```
+
+**로그 확인**:
+```bash
+docker-compose logs -f app
+```
+
+### 시나리오 2: AWS 배포 (AWS RDS 사용)
+
+AWS RDS PostgreSQL을 사용하는 경우 앱만 실행:
+
+```bash
+# .env 파일에 AWS RDS 연결 정보가 설정되어 있어야 함
+docker-compose -f docker-compose.prod.yml up -d
+```
+
+**필요한 환경 변수** (`.env` 파일):
+```env
+SPRING_DATASOURCE_URL=jdbc:postgresql://your-rds-endpoint:5432/dbname
+SPRING_DATASOURCE_USERNAME=your_username
+SPRING_DATASOURCE_PASSWORD=your_password
+```
+
+### 시나리오 3: Docker 직접 빌드
+
+```bash
+# 이미지 빌드
+docker build -t haibackend:latest .
+
+# 컨테이너 실행
+docker run -d \
+  --name haibackend \
+  -p 8081:8081 \
+  --env-file .env \
+  haibackend:latest
+```
+
 ## 📡 API 엔드포인트
 
 ### 1. AI 채팅 (스트리밍)
@@ -199,6 +250,7 @@ dependencies {
 - **Gradle**: 8.x
 - **IDE**: IntelliJ IDEA 권장
 - **Database**: PostgreSQL 13 이상
+- **Docker**: (선택) Docker 20.10 이상, Docker Compose V2
 
 
 ## 👥 기여

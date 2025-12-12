@@ -1,4 +1,4 @@
-package com.lgcns.haibackend.bedrock.client;
+package com.lgcns.haibackend.bedrock.domain.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -12,26 +12,26 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Message {
+public class MessageDTO {
     private String role;
     private String content;
 
-    public static Message user(String content) {
-        return Message.builder()
+    public static MessageDTO user(String content) {
+        return MessageDTO.builder()
                 .role("user")
                 .content(content)
                 .build();
     }
 
-    public static Message assistant(String content) {
-        return Message.builder()
+    public static MessageDTO assistant(String content) {
+        return MessageDTO.builder()
                 .role("assistant")
                 .content(content)
                 .build();
     }
 
-    public static Message system(String content) {
-        return Message.builder()
+    public static MessageDTO system(String content) {
+        return MessageDTO.builder()
                 .role("system")
                 .content(content)
                 .build();

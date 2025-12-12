@@ -17,6 +17,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
+    defer-datasource-initialization: true
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
@@ -52,3 +53,6 @@ fastapi:
 
 server:
   port: ${SERVER_PORT}
+
+jwt:
+  secret: ${JWT_SECRET_KEY}
