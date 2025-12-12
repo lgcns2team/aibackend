@@ -6,11 +6,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * Bedrock AI API 컨트롤러
@@ -29,11 +32,15 @@ public class BedrockController {
      */
     @PostMapping(value = "/chat", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<String> chat(@RequestBody ChatInput input) {
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        UUID userId = UUID.fromString(authentication.getPrincipal().toString());
+
         log.info("===========================================");
-        log.info("[CHAT REQUEST] UserID: {}, Query: {}", input.getUserId(), input.getMessage());
+        log.info("[CHAT REQUEST] UserID: {}, Query: {}", userId, input.getMessage());
         log.info("===========================================");
 
-        return bedrockService.retrieveFromKnowledgeBase(input.getMessage(), input.getUserId())
+        return bedrockService.retrieveFromKnowledgeBase(input.getMessage(), userId)
                 .doOnSubscribe(subscription -> {
                     log.info("[KB SEARCH] Starting Knowledge Base search...");
                 })
@@ -84,7 +91,6 @@ public class BedrockController {
 
     @Data
     public static class ChatInput {
-        private Long userId;
         private String message;
     }
 }

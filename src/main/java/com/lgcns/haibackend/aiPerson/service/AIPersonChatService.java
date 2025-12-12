@@ -1,10 +1,9 @@
 package com.lgcns.haibackend.aiPerson.service;
 
-import java.util.List;
+import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 
-import com.lgcns.haibackend.aiPerson.domain.dto.AIPersonDetailDTO;
 import com.lgcns.haibackend.bedrock.domain.dto.MessageDTO;
 import com.lgcns.haibackend.bedrock.service.BedrockService;
 import com.lgcns.haibackend.common.redis.RedisChatRepository;
@@ -18,11 +17,10 @@ import reactor.core.publisher.Flux;
 @Slf4j
 public class AIPersonChatService {
 
-    private final AIPersonService aiPersonService;
     private final BedrockService bedrockService;
     private final RedisChatRepository redisChatRepository;
 
-    public Flux<String> chat(String promptId, Long userId, String userMessage) {
+    public Flux<String> chat(String promptId, UUID userId, String userMessage) {
 
         // 1) 인물 상세 정보 불러오기
         // AIPersonDetailDTO person = aiPersonService.getPersonDetail(promptId);
@@ -61,7 +59,7 @@ public class AIPersonChatService {
                 });
     }
 
-    private String buildAIPersonKey(String promptId, Long userId) {
+    private String buildAIPersonKey(String promptId, UUID userId) {
         return "aiperson:chat:" + promptId + ":" + userId;
     }
 
