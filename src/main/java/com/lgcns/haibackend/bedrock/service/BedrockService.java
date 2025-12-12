@@ -41,16 +41,16 @@ public class BedrockService {
         // redis key관련 상수 및 key 생성 로직 추가
         private static final String CHATBOT_KEY_PREFIX = "chatbot:chat:";
 
-        private String getChatbotKey(Long userId) {
-                return String.format("%s%d", CHATBOT_KEY_PREFIX, userId);
+        private String getChatbotKey(String userIdStr) {
+                return String.format("%s%s", CHATBOT_KEY_PREFIX, userIdStr);
         }
 
         /**
          * Knowledge Base 검색 - 스트리밍
          * 이 메서드를 사용하세요!
          */
-        public Flux<String> retrieveFromKnowledgeBase(String query, Long userId) {
-                String redisKey = getChatbotKey(userId);
+        public Flux<String> retrieveFromKnowledgeBase(String query, String userIdStr) {
+                String redisKey = getChatbotKey(userIdStr);
 
                 // log.info("[RAG] Starting RAG stream for UserID: {}", userId);
 
@@ -61,6 +61,29 @@ public class BedrockService {
                 // 2. 사용자 메시지를 Redis에 먼저 저장 (History Append - User Message)
                 MessageDTO userMessage = MessageDTO.user(query);
                 redisChatRepository.appendMessage(redisKey, userMessage);
+                // ----------------------------------------------------
+                // [수정 시작] 실제 AI 호출 로직을 Mocking으로 대체 
+                // ----------------------------------------------------
+                // String mockResponse = "AI 테스트 응답입니다. 요청: '" + query + "'. 시간: " + System.currentTimeMillis();
+                // // 2. 가짜 응답을 Mono<String>으로 래핑하고, 성공 핸들러(doOnSuccess)는 유지합니다.
+                // return Flux.just(mockResponse)
+                //         .collect(Collectors.joining()) // Mono<String>으로 변환
+                        
+                //         // 3. 응답 완료 후 로직 수행 (History Append - AI Message)
+                //         .doOnSuccess(fullResponse -> {
+                //                 log.info("[RAG] Mock Stream completed. Saving response to Redis.");
+                //                 MessageDTO aiMessage = MessageDTO.assistant(fullResponse);
+                //                 redisChatRepository.appendMessage(redisKey, aiMessage);
+                //         })
+                //         .doOnError(error -> {
+                //                 // Mocking이므로 에러가 발생할 일은 거의 없지만, 로직은 유지
+                //                 log.error("[RAG ERROR] Mock failed for UserID: {}", userIdStr);
+                //         })
+                        
+                //         // 4. Mono<String>을 다시 Flux<String>으로 변환하여 반환
+                //         .flatMapMany(response -> {
+                //                 return Flux.just(response);
+                //         });
 
                 // 3. KnowledgeBaseRequest에 History 포함하여 요청 생성
                 KnowledgeBaseRequest request = KnowledgeBaseRequest.builder()
@@ -80,7 +103,7 @@ public class BedrockService {
                                         redisChatRepository.appendMessage(redisKey, aiMessage);
                                 })
                                 .doOnError(error -> {
-                                        log.error("[RAG ERROR] Stream failed for UserID: {}, Error: {}", userId,
+                                        log.error("[RAG ERROR] Stream failed for UserID: {}, Error: {}", userIdStr,
                                                         error.getMessage());
                                 })
                                 // 6. Mono<String>을 다시 Flux<String>으로 변환하여 스트리밍
