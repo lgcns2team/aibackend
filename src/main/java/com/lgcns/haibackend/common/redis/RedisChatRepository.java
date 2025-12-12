@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.springframework.data.redis.core.RedisTemplate;
@@ -61,6 +62,17 @@ public class RedisChatRepository {
         Set<String> keys = redisTemplate.keys(pattern);
         if (keys != null && !keys.isEmpty()) {
             redisTemplate.delete(keys);
+        }
+    }
+
+    public void deleteAllAIPersonChats(UUID userId) {
+        // aiperson:chat:*:userId 패턴으로 모든 키 검색
+        String pattern = "aiperson:chat:*:" + userId;
+        Set<String> keys = redisTemplate.keys(pattern);
+        
+        if (keys != null && !keys.isEmpty()) {
+            redisTemplate.delete(keys);
+            System.out.println("[REDIS] Deleted " + keys.size() + " AI Person chat keys for user: " + userId);
         }
     }
 

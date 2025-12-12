@@ -2,16 +2,18 @@ package com.lgcns.haibackend.bedrock.controller;
 
 import com.lgcns.haibackend.bedrock.service.BedrockService;
 
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * Bedrock AI API 컨트롤러
@@ -29,22 +31,16 @@ public class BedrockController {
      * 프론트엔드에서 /api/ai/chat 호출 시 사용됨
      */
     @PostMapping(value = "/chat", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-        public Flux<String> chat(HttpServletRequest request, @RequestBody ChatInput input) {
-            // 💡 [추가] JWT 필터가 저장한 userIdStr과 role 추출
-        String userIdStr = (String) request.getAttribute("userIdStr");
-        String role = (String) request.getAttribute("role");
-        
-        if (userIdStr == null) {
-            log.error("JWT 토큰 없음: userIdStr is null");
-            return Flux.error(new RuntimeException("인증 정보가 유효하지 않습니다."));
-        }
-        
+    public Flux<String> chat(@RequestBody ChatInput input) {
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        UUID userId = UUID.fromString(authentication.getPrincipal().toString());
+
         log.info("===========================================");
-        //log.info("[CHAT REQUEST] UserID: {}, Query: {}", input.getUserId(), input.getMessage());
-        log.info("[CHAT REQUEST] UserID (from JWT): {}, Role: {}, Query: {}", userIdStr, role, input.getMessage());
+        log.info("[CHAT REQUEST] UserID: {}, Query: {}", userId, input.getMessage());
         log.info("===========================================");
 
-        return bedrockService.retrieveFromKnowledgeBase(input.getMessage(), userIdStr)
+        return bedrockService.retrieveFromKnowledgeBase(input.getMessage(), userId)
                 .doOnSubscribe(subscription -> {
                     log.info("[KB SEARCH] Starting Knowledge Base search...");
                 })
@@ -95,7 +91,6 @@ public class BedrockController {
 
     @Data
     public static class ChatInput {
-        // private Long userId;
         private String message;
     }
 }

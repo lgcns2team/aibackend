@@ -14,6 +14,7 @@ import reactor.core.publisher.Flux;
 
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -38,19 +39,19 @@ public class BedrockService {
 
         private final FastApiClient fastApiClient;
 
-        // redis key관련 상수 및 key 생성 로직 추가
-        private static final String CHATBOT_KEY_PREFIX = "chatbot:chat:";
+        // // redis key관련 상수 및 key 생성 로직 추가
+        // private static final String CHATBOT_KEY_PREFIX = "chatbot:chat:";
 
-        private String getChatbotKey(String userIdStr) {
-                return String.format("%s%s", CHATBOT_KEY_PREFIX, userIdStr);
+        private String getChatbotKey(UUID userId) {
+                return "chatbot:chat:" + userId;
         }
 
         /**
          * Knowledge Base 검색 - 스트리밍
          * 이 메서드를 사용하세요!
          */
-        public Flux<String> retrieveFromKnowledgeBase(String query, String userIdStr) {
-                String redisKey = getChatbotKey(userIdStr);
+        public Flux<String> retrieveFromKnowledgeBase(String query, UUID userId) {
+                String redisKey = getChatbotKey(userId);
 
                 // log.info("[RAG] Starting RAG stream for UserID: {}", userId);
 
@@ -103,7 +104,7 @@ public class BedrockService {
                                         redisChatRepository.appendMessage(redisKey, aiMessage);
                                 })
                                 .doOnError(error -> {
-                                        log.error("[RAG ERROR] Stream failed for UserID: {}, Error: {}", userIdStr,
+                                        log.error("[RAG ERROR] Stream failed for UserID: {}, Error: {}", userId,
                                                         error.getMessage());
                                 })
                                 // 6. Mono<String>을 다시 Flux<String>으로 변환하여 스트리밍

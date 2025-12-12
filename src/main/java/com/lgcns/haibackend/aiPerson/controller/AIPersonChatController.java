@@ -1,6 +1,10 @@
 package com.lgcns.haibackend.aiPerson.controller;
 
+import java.util.UUID;
+
 import org.springframework.http.MediaType;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import com.lgcns.haibackend.aiPerson.service.AIPersonChatService;
@@ -24,9 +28,11 @@ public class AIPersonChatController {
     @PostMapping(value = "/{promptId}/chat", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<String> chatWithPerson(
             @PathVariable("promptId") String promptId,
-            @RequestParam("userId") Long userId,
             @RequestBody AIPersonChatRequest request) {
         
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        UUID userId = UUID.fromString(authentication.getPrincipal().toString());
+
         log.info("===========================================");
         log.info("[AI PERSON CHAT REQUEST] PromptID: {}, UserID: {}, Message: {}", 
                 promptId, userId, request.getMessage());
