@@ -53,3 +53,6 @@ fastapi:
 
 server:
   port: ${SERVER_PORT}
+
+jwt:
+  secret: ${JWT_SECRET_KEY}
