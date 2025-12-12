@@ -14,6 +14,7 @@ import reactor.core.publisher.Flux;
 
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -38,18 +39,18 @@ public class BedrockService {
 
         private final FastApiClient fastApiClient;
 
-        // redis key관련 상수 및 key 생성 로직 추가
-        private static final String CHATBOT_KEY_PREFIX = "chatbot:chat:";
+        // // redis key관련 상수 및 key 생성 로직 추가
+        // private static final String CHATBOT_KEY_PREFIX = "chatbot:chat:";
 
-        private String getChatbotKey(Long userId) {
-                return String.format("%s%d", CHATBOT_KEY_PREFIX, userId);
+        private String getChatbotKey(UUID userId) {
+                return "chatbot:chat:" + userId;
         }
 
         /**
          * Knowledge Base 검색 - 스트리밍
          * 이 메서드를 사용하세요!
          */
-        public Flux<String> retrieveFromKnowledgeBase(String query, Long userId) {
+        public Flux<String> retrieveFromKnowledgeBase(String query, UUID userId) {
                 String redisKey = getChatbotKey(userId);
 
                 // log.info("[RAG] Starting RAG stream for UserID: {}", userId);

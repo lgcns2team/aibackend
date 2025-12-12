@@ -2,10 +2,15 @@ package com.lgcns.haibackend.filter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
+import java.util.Collections;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
@@ -76,10 +81,30 @@ public class JwtFilter implements Filter {
 
         try {
             System.out.println(">>>>>> token validation");
-            Jwts.parserBuilder()
+
+            Claims claims = Jwts.parserBuilder()
                     .setSigningKey(key)
                     .build()
-                    .parseClaimsJws(token);
+                    .parseClaimsJws(token)
+                    .getBody();
+            
+            // userId와 role 추출
+            String userId = claims.getSubject();
+            String role = claims.get("role", String.class);
+            
+            System.out.println(">>>>>> 추출된 userId: " + userId + ", role: " + role);
+
+            // Authentication 객체 생성 및 SecurityContext에 저장
+            UsernamePasswordAuthenticationToken authentication = 
+                new UsernamePasswordAuthenticationToken(
+                    userId,  // principal에 userId 저장
+                    null,    // credentials
+                    Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + role))
+                );
+            
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+
+
             System.out.println(">>>>>> 검증 성공 -> 컨트롤로 이동");
             chain.doFilter(request, response);
 
@@ -88,6 +113,8 @@ public class JwtFilter implements Filter {
             e.printStackTrace();
             res.setStatus(HttpServletResponse.SC_UNAUTHORIZED); // 👈 검증 실패 시에도 401 상태를 명확히 반환
             return;
+        } finally {
+            SecurityContextHolder.clearContext();
         }
 
     }
