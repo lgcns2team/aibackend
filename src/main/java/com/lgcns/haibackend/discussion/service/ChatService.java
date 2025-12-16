@@ -1,6 +1,6 @@
 package com.lgcns.haibackend.discussion.service;
 
-import com.lgcns.haibackend.discussion.dto.Room;
+import com.lgcns.haibackend.discussion.domain.dto.Room;
 import com.lgcns.haibackend.user.domain.entity.UserEntity;
 import com.lgcns.haibackend.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;

@@ -1,7 +1,7 @@
 package com.lgcns.haibackend.discussion.controller;
 
-import com.lgcns.haibackend.discussion.dto.ChatMessage;
-import com.lgcns.haibackend.discussion.dto.Room;
+import com.lgcns.haibackend.discussion.domain.dto.ChatMessage;
+import com.lgcns.haibackend.discussion.domain.dto.Room;
 import com.lgcns.haibackend.discussion.service.ChatService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

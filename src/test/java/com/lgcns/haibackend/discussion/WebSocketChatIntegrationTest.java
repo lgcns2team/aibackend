@@ -1,6 +1,5 @@
 package com.lgcns.haibackend.discussion;
 
-import com.lgcns.haibackend.discussion.dto.ChatMessage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -15,6 +14,8 @@ import org.springframework.web.socket.messaging.WebSocketStompClient;
 import org.springframework.web.socket.sockjs.client.SockJsClient;
 import org.springframework.web.socket.sockjs.client.Transport;
 import org.springframework.web.socket.sockjs.client.WebSocketTransport;
+
+import com.lgcns.haibackend.discussion.domain.dto.ChatMessage;
 
 import java.lang.reflect.Type;
 import java.util.Collections;

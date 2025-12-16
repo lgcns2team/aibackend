@@ -1,4 +1,4 @@
-package com.lgcns.haibackend.discussion.dto;
+package com.lgcns.haibackend.discussion.domain.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
