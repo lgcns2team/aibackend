@@ -1,7 +1,7 @@
 package com.lgcns.haibackend.discussion.service;
 
 import com.lgcns.haibackend.discussion.dto.Room;
-import com.lgcns.haibackend.user.entity.User;
+import com.lgcns.haibackend.user.domain.entity.UserEntity;
 import com.lgcns.haibackend.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -21,10 +21,10 @@ public class ChatService {
     private final Map<String, Room> activeRooms = new ConcurrentHashMap<>();
 
     public Room createRoom(UUID teacherId) {
-        User teacher = userRepository.findById(teacherId)
+        UserEntity teacher = userRepository.findById(teacherId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-        if (teacher.getRole() != User.Role.TEACHER) {
+        if (!"TEACHER".equals(teacher.getRole())) {
             throw new IllegalArgumentException("Only teachers can create rooms");
         }
 
@@ -33,7 +33,7 @@ public class ChatService {
                 .roomId(roomId)
                 .teacherId(teacherId)
                 .grade(teacher.getGrade())
-                .classNumber(teacher.getClassNumber())
+                .classNumber(teacher.getClassroom())
                 .build();
 
         activeRooms.put(roomId, room);
@@ -50,7 +50,7 @@ public class ChatService {
             throw new IllegalArgumentException("Room not found");
         }
 
-        User student = userRepository.findById(studentId)
+        UserEntity student = userRepository.findById(studentId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
         // If it's the teacher who owns the room, allow
@@ -58,13 +58,13 @@ public class ChatService {
             return;
         }
 
-        if (student.getRole() != User.Role.STUDENT) {
+        if (!"STUDENT".equals(student.getRole())) {
             // Depending on requirements, maybe other teachers can't join?
             // For now assume only students and the owner teacher.
             throw new IllegalArgumentException("Only students can join rooms");
         }
 
-        if (!student.getGrade().equals(room.getGrade()) || !student.getClassNumber().equals(room.getClassNumber())) {
+        if (!student.getGrade().equals(room.getGrade()) || !student.getClassroom().equals(room.getClassNumber())) {
             throw new IllegalArgumentException("Student does not belong to this teacher's class");
         }
     }

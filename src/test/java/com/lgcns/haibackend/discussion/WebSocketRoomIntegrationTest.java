@@ -1,8 +1,9 @@
 package com.lgcns.haibackend.discussion;
 
 import com.lgcns.haibackend.discussion.dto.ChatMessage;
+
 import com.lgcns.haibackend.discussion.dto.Room;
-import com.lgcns.haibackend.user.entity.User;
+import com.lgcns.haibackend.user.domain.entity.UserEntity;
 import com.lgcns.haibackend.user.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,8 +39,8 @@ class WebSocketRoomIntegrationTest {
 
     private WebSocketStompClient stompClient;
 
-    private User teacher;
-    private User student;
+    private UserEntity teacher;
+    private UserEntity student;
 
     @BeforeEach
     void setup() {
@@ -48,23 +49,25 @@ class WebSocketRoomIntegrationTest {
         this.stompClient.setMessageConverter(new MappingJackson2MessageConverter());
 
         // Setup Data
-        teacher = User.builder()
-                .userId(UUID.randomUUID())
+        teacher = UserEntity.builder()
                 .name("Teacher Kim")
-                .role(User.Role.TEACHER)
+                .role("TEACHER")
                 .grade(1)
-                .classNumber(1)
+                .classroom(1)
+                .nickname("T_Kim")
+                .password("password")
                 .build();
-        userRepository.save(teacher);
+        teacher = userRepository.save(teacher);
 
-        student = User.builder()
-                .userId(UUID.randomUUID())
+        student = UserEntity.builder()
                 .name("Student Lee")
-                .role(User.Role.STUDENT)
+                .role("STUDENT")
                 .grade(1)
-                .classNumber(1)
+                .classroom(1)
+                .nickname("S_Lee")
+                .password("password")
                 .build();
-        userRepository.save(student);
+        student = userRepository.save(student);
     }
 
     @Test
