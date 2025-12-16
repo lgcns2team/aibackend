@@ -1,7 +1,7 @@
 package com.lgcns.haibackend.discussion.controller;
 
 import com.lgcns.haibackend.discussion.domain.dto.ChatMessage;
-import com.lgcns.haibackend.discussion.domain.dto.Room;
+import com.lgcns.haibackend.discussion.domain.dto.DebateRoom;
 import com.lgcns.haibackend.discussion.service.ChatService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -24,10 +24,10 @@ public class ChatController {
     private final ChatService chatService;
 
     @PostMapping("/chat/room")
-    public ResponseEntity<Room> createRoom(@RequestBody Map<String, String> payload) {
+    public ResponseEntity<DebateRoom> createRoom(@RequestBody Map<String, String> payload) {
         String teacherIdStr = payload.get("teacherId");
         UUID teacherId = UUID.fromString(teacherIdStr);
-        Room room = chatService.createRoom(teacherId);
+        DebateRoom room = chatService.createRoom(teacherId);
         return ResponseEntity.ok(room);
     }
 

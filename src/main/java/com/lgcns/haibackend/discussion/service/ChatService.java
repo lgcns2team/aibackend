@@ -1,6 +1,6 @@
 package com.lgcns.haibackend.discussion.service;
 
-import com.lgcns.haibackend.discussion.domain.dto.Room;
+import com.lgcns.haibackend.discussion.domain.dto.DebateRoom;
 import com.lgcns.haibackend.user.domain.entity.UserEntity;
 import com.lgcns.haibackend.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -18,9 +18,9 @@ public class ChatService {
 
     // In-memory storage for active rooms. Key: roomId, Value: Room info
     // In production, use Redis or DB.
-    private final Map<String, Room> activeRooms = new ConcurrentHashMap<>();
+    private final Map<UUID, DebateRoom> activeRooms = new ConcurrentHashMap<>();
 
-    public Room createRoom(UUID teacherId) {
+    public DebateRoom createRoom(UUID teacherId) {
         UserEntity teacher = userRepository.findById(teacherId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
@@ -28,24 +28,22 @@ public class ChatService {
             throw new IllegalArgumentException("Only teachers can create rooms");
         }
 
-        String roomId = UUID.randomUUID().toString();
-        Room room = Room.builder()
+        UUID roomId = UUID.randomUUID();
+        DebateRoom room = DebateRoom.builder()
                 .roomId(roomId)
                 .teacherId(teacherId)
-                .grade(teacher.getGrade())
-                .classNumber(teacher.getClassroom())
                 .build();
 
         activeRooms.put(roomId, room);
         return room;
     }
 
-    public Room getRoom(String roomId) {
+    public DebateRoom getRoom(String roomId) {
         return activeRooms.get(roomId);
     }
 
     public void validateJoin(String roomId, UUID studentId) {
-        Room room = activeRooms.get(roomId);
+        DebateRoom room = activeRooms.get(roomId);
         if (room == null) {
             throw new IllegalArgumentException("Room not found");
         }
@@ -64,8 +62,8 @@ public class ChatService {
             throw new IllegalArgumentException("Only students can join rooms");
         }
 
-        if (!student.getGrade().equals(room.getGrade()) || !student.getClassroom().equals(room.getClassNumber())) {
-            throw new IllegalArgumentException("Student does not belong to this teacher's class");
-        }
+        // if (!student.getGrade().equals(room.getGrade()) || !student.getClassroom().equals(room.getClassNumber())) {
+        //     throw new IllegalArgumentException("Student does not belong to this teacher's class");
+        // }
     }
 }
