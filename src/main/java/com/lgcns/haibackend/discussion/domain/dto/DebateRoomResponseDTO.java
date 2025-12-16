@@ -1,6 +1,7 @@
 package com.lgcns.haibackend.discussion.domain.dto;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.UUID;
 
 import lombok.AllArgsConstructor;
@@ -22,4 +23,17 @@ public class DebateRoomResponseDTO {
     private String topicTitle;
     private String topicDescription;
     private LocalDateTime createdAt;
+
+    public static DebateRoomResponseDTO from(Map<Object, Object> map) {
+    return DebateRoomResponseDTO.builder()
+            .roomId(UUID.fromString((String) map.get("roomId")))
+            .teacherId(UUID.fromString((String) map.get("teacherId")))
+            .classCode(UUID.fromString((String) map.get("classCode")))
+            .participantCount(Integer.parseInt((String) map.getOrDefault("participantCount", "0")))
+            .topicTitle((String) map.get("topicTitle"))
+            .topicDescription((String) map.get("topicDescription"))
+            .createdAt(LocalDateTime.parse((String) map.get("createdAt")))
+            .build();
+}
+
 }

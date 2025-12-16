@@ -1,6 +1,7 @@
 package com.lgcns.haibackend.user.repository;
 
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -15,4 +16,5 @@ public interface UserRepository extends JpaRepository<UserEntity, UUID> {
 
     public Optional<UserEntity> findByNameAndPassword(String name, String password);
     public Optional<UserEntity> findByUserId(UUID userId);
+    public UUID findClassCodeByUserId(UUID userId);
 }

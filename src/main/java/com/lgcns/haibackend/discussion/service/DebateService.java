@@ -14,8 +14,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -56,6 +61,14 @@ public class DebateService {
 
         redisTemplate.opsForHash().putAll(roomKey, roomMap);
 
+        // 클래스코드별 토론방
+        String classCodeIndexKey = "debate:classCode:" + classCode + ":rooms";
+        redisTemplate.opsForZSet().add(
+            classCodeIndexKey,
+            roomId.toString(),
+            createdAt.atZone(ZoneId.systemDefault()).toEpochSecond()
+        );
+
         return DebateRoomResponseDTO.builder()
                         .roomId(roomId)
                         .teacherId(teacherId)
@@ -65,6 +78,36 @@ public class DebateService {
                         .topicDescription(req.getTopicDescription())
                         .createdAt(createdAt)
                         .build();
+    }
+
+    public List<DebateRoomResponseDTO> getRoomsByClassCode(
+            Authentication auth
+    ) {
+        UUID userId = AuthUtils.getUserId(auth);
+        UUID classCode = userRepository.findClassCodeByUserId(userId);
+
+        if (classCode == null) {
+            return List.of();
+        }
+
+        String classIndexKey = "debate:class:" + classCode + ":rooms";
+        Set<String> roomIds = redisTemplate.opsForZSet()
+                .reverseRange(classIndexKey, 0, 50);
+
+        if (roomIds == null || roomIds.isEmpty()) {
+            return List.of();
+        }
+
+        List<DebateRoomResponseDTO> result = new ArrayList<>();
+
+        for (String roomIdStr : roomIds) {
+            String roomKey = "debate:room:" + roomIdStr;
+            Map<Object, Object> map = redisTemplate.opsForHash().entries(roomKey);
+            if (map == null || map.isEmpty()) continue;
+
+            result.add(DebateRoomResponseDTO.from(map));
+        }
+        return result;
     }
 
     public DebateRoomRequestDTO getRoom(String roomId) {
