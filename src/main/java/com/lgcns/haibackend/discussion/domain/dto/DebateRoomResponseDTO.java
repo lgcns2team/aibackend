@@ -2,30 +2,24 @@ package com.lgcns.haibackend.discussion.domain.dto;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import lombok.ToString;
-
 
 @Getter
 @Setter
+@NoArgsConstructor 
+@AllArgsConstructor 
 @Builder
-@NoArgsConstructor
-@AllArgsConstructor
-@ToString
-public class DebateRoom {
-
+public class DebateRoomResponseDTO {
     private UUID roomId;
-    private UUID topicId;
     private UUID teacherId;
-    private boolean isActive = true; // 기본값은 활성(true)
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
-    private Integer participantsCount = 0; // 기본값 0
+    private UUID classCode;
+    private Integer participantCount;
     private String topicTitle;
     private String topicDescription;
-
+    private LocalDateTime createdAt;
 }

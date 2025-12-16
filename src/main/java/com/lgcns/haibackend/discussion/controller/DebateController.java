@@ -1,8 +1,9 @@
 package com.lgcns.haibackend.discussion.controller;
 
 import com.lgcns.haibackend.discussion.domain.dto.ChatMessage;
-import com.lgcns.haibackend.discussion.domain.dto.DebateRoom;
-import com.lgcns.haibackend.discussion.service.ChatService;
+import com.lgcns.haibackend.discussion.domain.dto.DebateRoomRequestDTO;
+import com.lgcns.haibackend.discussion.domain.dto.DebateRoomResponseDTO;
+import com.lgcns.haibackend.discussion.service.DebateService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
@@ -10,24 +11,23 @@ import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.Map;
-import java.util.UUID;
 
 @RestController
 @RequiredArgsConstructor
-public class ChatController {
+@RequestMapping("/api/debate")
+public class DebateController {
 
-    private final ChatService chatService;
+    private final DebateService debateService;
 
-    @PostMapping("/chat/room")
-    public ResponseEntity<DebateRoom> createRoom(@RequestBody Map<String, String> payload) {
-        String teacherIdStr = payload.get("teacherId");
-        UUID teacherId = UUID.fromString(teacherIdStr);
-        DebateRoom room = chatService.createRoom(teacherId);
+    @PostMapping("room")
+    public ResponseEntity<DebateRoomResponseDTO> createRoom(@RequestBody DebateRoomRequestDTO req,
+            Authentication authentication) {
+        DebateRoomResponseDTO room = debateService.createRoom(req, authentication);
         return ResponseEntity.ok(room);
     }
 
@@ -42,7 +42,7 @@ public class ChatController {
     public ChatMessage addUser(@DestinationVariable String roomId, @Payload ChatMessage chatMessage,
             SimpMessageHeaderAccessor headerAccessor) {
         // Validate join logic
-        chatService.validateJoin(roomId, chatMessage.getUserId());
+        debateService.validateJoin(roomId, chatMessage.getUserId());
 
         // Add username and roomId in web socket session
         headerAccessor.getSessionAttributes().put("username", chatMessage.getSender());

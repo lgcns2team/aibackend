@@ -13,19 +13,18 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 import lombok.ToString;
 
 @Entity
 @Table(name = "users")
 @Getter
-@Setter
 @Builder
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @ToString(exclude = { "discussions", "aiChats" })
 public class UserEntity {
@@ -46,6 +45,9 @@ public class UserEntity {
 
     @Column(nullable = false, updatable = true)
     private String nickname;
+
+    @Column
+    private UUID classCode;
 
     // 토론, AI챗봇, 교과서 그리기 연결 필요
 }
