@@ -15,7 +15,7 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
             // CSRF 비활성화 (JWT 사용 시 불필요)
-            .csrf(csrf -> csrf.disable())
+            .csrf(csrf -> csrf.ignoringRequestMatchers("/ws-stomp/**"))
             
             // 세션 사용 안 함 (Stateless)
             .sessionManagement(session -> 
@@ -23,7 +23,13 @@ public class SecurityConfig {
             
             // 모든 요청 허용 (JwtFilter에서 직접 검증)
             .authorizeHttpRequests(auth -> 
-                auth.anyRequest().permitAll())
+                auth
+            .requestMatchers(
+                "/", "/ws-stomp/**", "/chat-test.html", "/favicon.ico",
+                "/css/**", "/js/**", "/images/**", "/webjars/**",
+                "/swagger-ui/**", "/v3/api-docs/**", "/static/**"
+            ).permitAll()
+            .anyRequest().authenticated())
             
             // 기본 로그인 폼 비활성화
             .formLogin(form -> form.disable())

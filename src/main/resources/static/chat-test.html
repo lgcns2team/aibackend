@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>WS/STOMP 연결 테스트</title>
+  <style>
+    body { font-family: sans-serif; padding: 16px; }
+    #log { border: 1px solid #ddd; height: 280px; overflow: auto; padding: 8px; margin: 12px 0; white-space: pre-wrap; }
+    input { padding: 8px; width: 70%; }
+    button { padding: 8px 12px; }
+    .row { margin: 6px 0; }
+  </style>
+</head>
+<body>
+  <h2>채팅 연결 테스트</h2>
+
+  <div class="row">
+    roomId: <input id="roomId" value="class-101" />
+  </div>
+  <div class="row">
+    sender: <input id="sender" value="학생1" />
+    <button id="connectBtn">연결</button>
+    <button id="disconnectBtn" disabled>해제</button>
+  </div>
+
+  <div id="log"></div>
+
+  <div class="row">
+    <input id="msg" placeholder="내용을 입력하세요..." />
+    <button id="sendBtn" disabled>전송</button>
+  </div>
+
+  <!-- CDN: SockJS / STOMP -->
+  <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7/bundles/stomp.umd.min.js"></script>
+
+  <script>
+    let client = null;
+
+    const logEl = document.getElementById('log');
+    const connectBtn = document.getElementById('connectBtn');
+    const disconnectBtn = document.getElementById('disconnectBtn');
+    const sendBtn = document.getElementById('sendBtn');
+
+    function log(msg) {
+      const div = document.createElement('div');
+      div.textContent = msg;
+      logEl.appendChild(div);
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function now() {
+      return new Date().toLocaleTimeString();
+    }
+
+    connectBtn.onclick = () => {
+      const sender = document.getElementById('sender').value.trim();
+      if (!sender) {
+        alert("sender를 입력하세요");
+        return;
+      }
+
+      // same-origin: 백엔드(8081)에서 열린 페이지면 /ws-stomp가 백엔드로 감
+      const socket = new SockJS('/ws-stomp');
+
+      client = new StompJs.Client({
+        webSocketFactory: () => socket,
+        debug: (str) => console.log(str),
+        reconnectDelay: 0,
+
+        onConnect: () => {
+          log(`[${now()}] 연결 성공 (CONNECTED)`);
+
+          // 서버가 @SendTo("/topic/public")로 뿌리므로 여기 구독이 정답
+          client.subscribe('/topic/public', (frame) => {
+            // 서버 DTO: { type: "CHAT|JOIN|LEAVE", sender: "...", content: "..." }
+            const m = JSON.parse(frame.body);
+
+            // 표시용 포맷
+            if (m.type === 'JOIN') {
+              log(`[${now()}] ${m.sender} 입장`);
+            } else if (m.type === 'LEAVE') {
+              log(`[${now()}] ${m.sender} 퇴장`);
+            } else {
+              log(`[${now()}] ${m.sender}: ${m.content ?? ''}`);
+            }
+          });
+
+          // 입장 메시지: 컨트롤러 @MessageMapping("/chat.addUser") 로 보내야 함
+          // 서버 enum에 맞춰 type="JOIN", 내용 필드명은 content
+          client.publish({
+            destination: '/app/chat.addUser',
+            body: JSON.stringify({
+              type: 'JOIN',
+              sender: sender,
+              content: '' // JOIN은 내용 없어도 됨
+            })
+          });
+
+          connectBtn.disabled = true;
+          disconnectBtn.disabled = false;
+          sendBtn.disabled = false;
+        },
+
+        onStompError: (frame) => {
+          log(`[${now()}] STOMP error: ` + frame.headers['message']);
+          console.error(frame.body);
+        },
+
+        onWebSocketError: (evt) => {
+          log(`[${now()}] WebSocket error (콘솔 확인)`);
+          console.error(evt);
+        },
+
+        onDisconnect: () => log(`[${now()}] 🔌 연결 해제됨`)
+      });
+
+      client.activate();
+    };
+
+    disconnectBtn.onclick = () => {
+      if (client) client.deactivate();
+      client = null;
+      connectBtn.disabled = false;
+      disconnectBtn.disabled = true;
+      sendBtn.disabled = true;
+      log(`[${now()}] (사용자 요청) 연결 종료`);
+    };
+
+    sendBtn.onclick = () => {
+      const sender = document.getElementById('sender').value.trim();
+      const content = document.getElementById('msg').value.trim();
+      if (!content || !client) return;
+
+      // 채팅 메시지: 컨트롤러 @MessageMapping("/chat.sendMessage") 로 보내야 함
+      // 서버 enum에 맞춰 type="CHAT", 필드명은 content
+      client.publish({
+        destination: '/app/chat.sendMessage',
+        body: JSON.stringify({
+          type: 'CHAT',
+          sender: sender,
+          content: content
+        })
+      });
+
+      // 내 화면에서도 "보낸 것" 표시(원하면 지워도 됨)
+      log(`[${now()}] (me) ${sender}: ${content}`);
+
+      document.getElementById('msg').value = '';
+    };
+
+    document.getElementById('msg').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') sendBtn.onclick();
+    });
+  </script>
+</body>
+</html>
