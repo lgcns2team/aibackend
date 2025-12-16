@@ -15,7 +15,8 @@ spring:
       timeout: 2000
 
   jpa:
-    hibernate:
+    defer-datasource-initialization: true
+    hibernate:    
       ddl-auto: update
     properties:
       hibernate:
