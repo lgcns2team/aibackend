@@ -1,4 +1,4 @@
-package com.lgcns.haibackend.bedrock.client;
+package com.lgcns.haibackend.bedrock.domain.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;

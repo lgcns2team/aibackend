@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.springframework.data.redis.core.RedisTemplate;
@@ -11,7 +12,7 @@ import org.springframework.stereotype.Repository;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.lgcns.haibackend.bedrock.client.Message;
+import com.lgcns.haibackend.bedrock.domain.dto.MessageDTO;
 
 import lombok.RequiredArgsConstructor;
 
@@ -25,7 +26,7 @@ public class RedisChatRepository {
     private static final Duration DEFAULT_TTL = Duration.ofHours(6);
 
     // key에 해당하는 전체 메시지 히스토리 조회
-    public List<Message> getMessages(String key) {
+    public List<MessageDTO> getMessages(String key) {
         List<String> rawList = redisTemplate.opsForList().range(key, 0, -1);
         if (rawList == null || rawList.isEmpty()) {
             return new ArrayList<>();
@@ -37,12 +38,12 @@ public class RedisChatRepository {
     }
 
     // 메시지 1개 추가
-    public void appendMessage(String key, Message message) {
+    public void appendMessage(String key, MessageDTO message) {
         appendMessage(key, message, DEFAULT_TTL);
     }
 
     // 메시지 1개 추가 (TTL 지정)
-    public void appendMessage(String key, Message message, Duration ttl) {
+    public void appendMessage(String key, MessageDTO message, Duration ttl) {
         String json = serialize(message);
         redisTemplate.opsForList().rightPush(key, json);
         if (ttl != null) {
@@ -64,7 +65,18 @@ public class RedisChatRepository {
         }
     }
 
-    private String serialize(Message message) {
+    public void deleteAllAIPersonChats(UUID userId) {
+        // aiperson:chat:*:userId 패턴으로 모든 키 검색
+        String pattern = "aiperson:chat:*:" + userId;
+        Set<String> keys = redisTemplate.keys(pattern);
+        
+        if (keys != null && !keys.isEmpty()) {
+            redisTemplate.delete(keys);
+            System.out.println("[REDIS] Deleted " + keys.size() + " AI Person chat keys for user: " + userId);
+        }
+    }
+
+    private String serialize(MessageDTO message) {
         try {
             return objectMapper.writeValueAsString(message);
         } catch (JsonProcessingException e) {
@@ -72,9 +84,9 @@ public class RedisChatRepository {
         }
     }
 
-    private Message deserialize(String json) {
+    private MessageDTO deserialize(String json) {
         try {
-            return objectMapper.readValue(json, Message.class);
+            return objectMapper.readValue(json, MessageDTO.class);
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Redis 역직렬화 실패", e);
         }
