@@ -13,16 +13,9 @@ import java.util.UUID;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class ChatMessage {
-    private MessageType type;
-    private String content;
-    private String sender;
+public class Room {
     private String roomId;
-    private UUID userId;
-
-    public enum MessageType {
-        CHAT,
-        JOIN,
-        LEAVE
-    }
+    private UUID teacherId;
+    private Integer grade;
+    private Integer classNumber;
 }

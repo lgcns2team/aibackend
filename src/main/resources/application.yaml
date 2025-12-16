@@ -17,7 +17,7 @@ spring:
   jpa:
     defer-datasource-initialization: true
     hibernate:    
-      ddl-auto: update
+      ddl-auto: create
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
@@ -28,7 +28,7 @@ spring:
     init:
       mode: always
       encoding: utf-8
-      data-locations: classpath:ai_person_data.sql 
+      data-locations: classpath:ai_person_data.sql, classpath:discussion_data.sql 
 
 logging:
   level:
