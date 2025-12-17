@@ -1,4 +1,5 @@
 package com.lgcns.haibackend.filter;
+
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
@@ -52,15 +53,10 @@ public class JwtFilter implements Filter {
         System.out.println("[debug] >>> client method : " + method);
 
         if ("OPTIONS".equalsIgnoreCase(req.getMethod())) {
-            res.setStatus(HttpServletResponse.SC_OK);
-            res.setHeader("Access-Control-Allow-Origin", "http://localhost:8080, http://localhost:3000");
-            res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
-            res.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type");
-            res.setHeader("Access-Control-Allow-Credentials", "true");
             chain.doFilter(request, response);
             return;
         }
-        
+
         // isPath 메서드가 true를 반환하면 토큰 검사 없이 통과시킵니다.
         if (isPath(path, method)) {
             System.out.println(">>> 인증/인가 없이 필터 통과: " + path);
@@ -87,23 +83,20 @@ public class JwtFilter implements Filter {
                     .build()
                     .parseClaimsJws(token)
                     .getBody();
-            
+
             // userId와 role 추출
             String userId = claims.getSubject();
             String role = claims.get("role", String.class);
-            
+
             System.out.println(">>>>>> 추출된 userId: " + userId + ", role: " + role);
 
             // Authentication 객체 생성 및 SecurityContext에 저장
-            UsernamePasswordAuthenticationToken authentication = 
-                new UsernamePasswordAuthenticationToken(
-                    userId,  // principal에 userId 저장
-                    null,    // credentials
-                    Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + role))
-                );
-            
-            SecurityContextHolder.getContext().setAuthentication(authentication);
+            UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                    userId, // principal에 userId 저장
+                    null, // credentials
+                    Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + role)));
 
+            SecurityContextHolder.getContext().setAuthentication(authentication);
 
             System.out.println(">>>>>> 검증 성공 -> 컨트롤로 이동");
             chain.doFilter(request, response);
@@ -123,7 +116,22 @@ public class JwtFilter implements Filter {
     // SecurityConfig와 유사하게 공개할 경로를 설정합니다.
     public boolean isPath(String path, String method) {
         return path.startsWith("/swagger-ui") ||
-                path.startsWith("/v3/api-docs") ;
-
+                path.startsWith("/v3/api-docs") ||
+                path.startsWith("/api/user") ||
+                path.startsWith("/api/wars") ||
+                path.startsWith("/api/trades") ||
+                path.startsWith("/api/kings") ||
+                path.startsWith("/api/countries") ||
+                path.startsWith("/api/capitals") ||
+                path.startsWith("/api/battles") ||
+                path.startsWith("/api/timeline/events") ||
+                path.startsWith("/api/main-event") ||
+                path.startsWith("/api/main-event/detail") ||
+                path.startsWith("/api/user/signup") ||
+                path.startsWith("/api/user/login") ||
+                path.startsWith("/chat/room") ||
+                path.startsWith("/ws-stomp") ||
+                path.startsWith("/favicon.ico") ||
+                path.startsWith("/chat-test.html");
     }
 }
