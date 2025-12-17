@@ -14,8 +14,10 @@ import lombok.RequiredArgsConstructor;
 import java.security.Principal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
@@ -29,6 +31,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequiredArgsConstructor
@@ -62,14 +65,18 @@ public class DebateController {
     ) {
         UUID userId = AuthUtils.getUserId(principal);
         debateService.validateJoin(roomId, userId);
-        String nickname = debateService.getNickname(userId);
+        String nickname = debateService.getNickName(userId);
 
-        headerAccessor.getSessionAttributes().put("roomId", roomId);
-        headerAccessor.getSessionAttributes().put("userId", userId.toString());
-        headerAccessor.getSessionAttributes().put("sender", nickname);
+        Map<String, Object> session = headerAccessor.getSessionAttributes();
+        if (session == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "No websocket session");
+        }
+        session.put("roomId", roomId);
+        session.put("userId", userId.toString());
+        session.put("sender", nickname);
 
         ChatMessage out = new ChatMessage();
-        // out.setMessageType(ChatMessage.MessageType.JOIN);
+        out.setType(ChatMessage.MessageType.JOIN);
         out.setUserId(userId);
         out.setSender(nickname);
         out.setCreatedAt(LocalDateTime.now());

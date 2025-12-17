@@ -17,7 +17,6 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -134,7 +133,7 @@ public class DebateService {
         }
     }
 
-    public String getNickname(UUID userId) {
+    public String getNickName(UUID userId) {
         return userRepository.findNickNameByUserId(userId);
     }
 }

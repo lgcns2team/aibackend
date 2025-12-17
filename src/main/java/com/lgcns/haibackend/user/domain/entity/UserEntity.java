@@ -42,7 +42,7 @@ public class UserEntity {
     private String nickname;
 
     @Column
-    private Integer tCode;
+    private Integer teacherCode;
 
     // 토론, AI챗봇, 교과서 그리기 연결 필요
 }
