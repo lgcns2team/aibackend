@@ -130,6 +130,7 @@ public class JwtFilter implements Filter {
                 path.startsWith("/api/user/signup") ||
                 path.startsWith("/api/user/login") ||
                 path.startsWith("/api/debate") || // 개발 중 필요시 주석해제
+                path.startsWith("/api/ai/debate") ||
                 path.startsWith("/chat/room") ||
                 path.startsWith("/ws-stomp") ||
                 path.startsWith("/favicon.ico") ||

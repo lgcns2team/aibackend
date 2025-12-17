@@ -41,15 +41,31 @@ public class DebateService {
     private final Map<UUID, DebateRoomRequestDTO> activeRooms = new ConcurrentHashMap<>();
 
     public DebateRoomResponseDTO createRoom(DebateRoomRequestDTO req, Authentication auth) {
+        UUID teacherId;
+        UserEntity teacher;
+        if (auth == null || !auth.isAuthenticated()) {
+            if (req.getTeacherId() != null) {
+                teacherId = req.getTeacherId();
+                teacher = userRepository.findByUserId(teacherId)
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED,
+                                "Provided Teacher User via ID not found"));
 
-        if (!AuthUtils.hasRole(auth, "TEACHER")) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "선생님만 토론방을 생성할 수 있습니다.");
+                if (!"TEACHER".equals(teacher.getRole().toString())) {
+                    throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                            "Provided User is not a TEACHER");
+                }
+            } else {
+                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,
+                        "Authentication required or teacherId must be provided");
+            }
+        } else {
+            if (!AuthUtils.hasRole(auth, "TEACHER")) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "선생님만 토론방을 생성할 수 있습니다.");
+            }
+            teacherId = AuthUtils.getUserId(auth);
+            teacher = userRepository.findByUserId(teacherId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
         }
-
-        UUID teacherId = AuthUtils.getUserId(auth);
-
-        UserEntity teacher = userRepository.findByUserId(teacherId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
 
         Integer teacherCode = teacher.getTeacherCode();
         UUID roomId = UUID.randomUUID();
@@ -77,14 +93,14 @@ public class DebateService {
                 createdAt.atZone(ZoneId.systemDefault()).toEpochSecond());
 
         return DebateRoomResponseDTO.builder()
-                        .roomId(roomId)
-                        .teacherId(teacherId)
-                        .teacherCode(teacherCode)
-                        .participantCount(req.getParticipantCount())
-                        .topicTitle(req.getTopicTitle())
-                        .topicDescription(req.getTopicDescription())
-                        .createdAt(createdAt)
-                        .build();
+                .roomId(roomId)
+                .teacherId(teacherId)
+                .teacherCode(teacherCode)
+                .participantCount(req.getParticipantCount())
+                .topicTitle(req.getTopicTitle())
+                .topicDescription(req.getTopicDescription())
+                .createdAt(createdAt)
+                .build();
     }
 
     public List<DebateRoomResponseDTO> getRoomsByClassCode(
@@ -94,7 +110,6 @@ public class DebateService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
 
         Integer teacherCode = user.getTeacherCode();
-
 
         String classIndexKey = "debate:teacherCode:" + teacherCode + ":rooms";
         Set<String> roomIds = redisTemplate.opsForZSet()
@@ -150,7 +165,7 @@ public class DebateService {
         }
 
         if (roomClassroom != null && userInfo.getClassroom() != null
-            && !roomClassroom.equals(userInfo.getClassroom().toString())) {
+                && !roomClassroom.equals(userInfo.getClassroom().toString())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Classroom mismatch");
         }
     }
