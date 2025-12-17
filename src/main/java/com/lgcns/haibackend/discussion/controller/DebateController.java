@@ -4,6 +4,8 @@ import com.lgcns.haibackend.common.security.AuthUtils;
 import com.lgcns.haibackend.discussion.domain.dto.ChatMessage;
 import com.lgcns.haibackend.discussion.domain.dto.DebateRoomRequestDTO;
 import com.lgcns.haibackend.discussion.domain.dto.DebateRoomResponseDTO;
+import com.lgcns.haibackend.discussion.domain.dto.DebateStatus;
+import com.lgcns.haibackend.discussion.domain.dto.StatusSelectMessage;
 import com.lgcns.haibackend.discussion.service.DebateService;
 
 import lombok.RequiredArgsConstructor;
@@ -72,31 +74,90 @@ public class DebateController {
 
         ChatMessage out = new ChatMessage();
         out.setType(ChatMessage.MessageType.JOIN);
-        out.setUserId(userId);
         out.setSender(nickname);
         out.setCreatedAt(LocalDateTime.now());
 
         messagingTemplate.convertAndSend("/topic/room/" + roomId, out);
     }
 
-    @MessageMapping("/chat.sendMessage/{roomId}")
-    @SendTo("/topic/room/{roomId}")
-    public ChatMessage sendMessage(@DestinationVariable String roomId, @Payload ChatMessage chatMessage) {
-        return chatMessage;
+    @MessageMapping("/room/{roomId}/status")
+    public void selectStatus(
+        @DestinationVariable String roomId,
+        @Payload StatusSelectMessage msg,
+        SimpMessageHeaderAccessor headerAccessor,
+        Principal principal
+    ) {
+        UUID userId = AuthUtils.getUserId(principal);
+
+        debateService.validateJoin(roomId, userId);
+
+        // status 저장
+        debateService.saveStatus(roomId, userId, msg.getStatus());
+
+        // 세션에 저장
+        Map<String, Object> session = headerAccessor.getSessionAttributes();
+        if (session != null) {
+            session.put("status", msg.getStatus().name());
+        }
+
+        String nickname = (String) (session != null ? session.get("sender") : null);
+        if (nickname == null) nickname = debateService.getNickName(userId);
+
+        ChatMessage out = ChatMessage.builder()
+            .type(ChatMessage.MessageType.STATUS)
+            .sender(nickname)
+            .status(msg.getStatus())
+            .createdAt(LocalDateTime.now())
+            .build();
+
+        messagingTemplate.convertAndSend("/topic/room/" + roomId, out);
     }
 
-    @MessageMapping("/chat.addUser/{roomId}")
-    @SendTo("/topic/room/{roomId}")
-    public ChatMessage addUser(@DestinationVariable String roomId, @Payload ChatMessage chatMessage,
-            SimpMessageHeaderAccessor headerAccessor) {
-        // Validate join logic
-        debateService.validateJoin(roomId, chatMessage.getUserId());
+    @MessageMapping("/room/{roomId}/chat")
+    public void sendMessage(
+        @DestinationVariable String roomId,
+        @Payload ChatMessage incoming,
+        SimpMessageHeaderAccessor headerAccessor,
+        Principal principal
+    ) {
+        UUID userId = AuthUtils.getUserId(principal);
 
-        // Add username and roomId in web socket session
-        headerAccessor.getSessionAttributes().put("username", chatMessage.getSender());
-        headerAccessor.getSessionAttributes().put("roomId", roomId);
-        return chatMessage;
+        debateService.validateJoin(roomId, userId);
+
+        // status 선택 여부 확인
+        DebateStatus status = debateService.requireStatusSelected(roomId, userId, headerAccessor);
+        String sender = debateService.resolveNickname(userId, headerAccessor);
+
+        ChatMessage out = ChatMessage.builder()
+            .type(ChatMessage.MessageType.CHAT)
+            .content(incoming.getContent())
+            .sender(sender)
+            .status(status)
+            .createdAt(LocalDateTime.now())
+            .build();
+
+        debateService.appendMessage(roomId, out);
+        messagingTemplate.convertAndSend("/topic/room/" + roomId, out);
     }
+
+    // @MessageMapping("/chat.sendMessage/{roomId}")
+    // @SendTo("/topic/room/{roomId}")
+    // public ChatMessage sendMessage(@DestinationVariable String roomId, @Payload ChatMessage chatMessage) {
+    //     return chatMessage;
+    // }
+
+    // @MessageMapping("/chat.addUser/{roomId}")
+    // @SendTo("/topic/room/{roomId}")
+    // public ChatMessage addUser(@DestinationVariable String roomId, @Payload ChatMessage chatMessage,
+    //         SimpMessageHeaderAccessor headerAccessor) {
+    //     // Validate join logic
+    //     debateService.validateJoin(roomId, chatMessage.getUserId());
+
+    //     // Add username and roomId in web socket session
+    //     headerAccessor.getSessionAttributes().put("username", chatMessage.getSender());
+    //     headerAccessor.getSessionAttributes().put("roomId", roomId);
+    //     return chatMessage;
+    // }
 
     /**
      * 토론 주제 추천 API

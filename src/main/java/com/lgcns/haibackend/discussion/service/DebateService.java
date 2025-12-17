@@ -1,8 +1,12 @@
 package com.lgcns.haibackend.discussion.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lgcns.haibackend.common.security.AuthUtils;
+import com.lgcns.haibackend.discussion.domain.dto.ChatMessage;
 import com.lgcns.haibackend.discussion.domain.dto.DebateRoomRequestDTO;
 import com.lgcns.haibackend.discussion.domain.dto.DebateRoomResponseDTO;
+import com.lgcns.haibackend.discussion.domain.dto.DebateStatus;
 import com.lgcns.haibackend.discussion.domain.dto.DebateTopicsRequest;
 import com.lgcns.haibackend.discussion.domain.dto.DebateTopicsResponse;
 import com.lgcns.haibackend.user.domain.entity.UserClassInfo;
@@ -13,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpStatus;
+import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -37,7 +42,7 @@ public class DebateService {
     private final UserRepository userRepository;
     private final RedisTemplate<String, String> redisTemplate;
     private final com.lgcns.haibackend.bedrock.client.FastApiClient fastApiClient;
-    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper;
     private final Map<UUID, DebateRoomRequestDTO> activeRooms = new ConcurrentHashMap<>();
 
     public DebateRoomResponseDTO createRoom(DebateRoomRequestDTO req, Authentication auth) {
@@ -157,6 +162,47 @@ public class DebateService {
 
     public String getNickName(UUID userId) {
         return userRepository.findNickNameByUserId(userId);
+    }
+
+    public void saveStatus(String roomId, UUID userId, DebateStatus status) {
+        String key = "debate:room:" + roomId + ":status";
+        redisTemplate.opsForHash().put(key, userId.toString(), status.name());
+    }
+
+    public DebateStatus requireStatusSelected(String roomId, UUID userId, SimpMessageHeaderAccessor headerAccessor) {
+    // 세션에 있으면 우선 사용
+    Map<String, Object> session = headerAccessor.getSessionAttributes();
+    if (session != null && session.get("status") != null) {
+        return DebateStatus.valueOf(session.get("status").toString());
+    }
+
+    // Redis에서 확인
+    String key = "debate:room:" + roomId + ":status";
+    Object v = redisTemplate.opsForHash().get(key, userId.toString());
+    if (v == null) {
+        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Select PRO/CON first");
+    }
+    return DebateStatus.valueOf(v.toString());
+    }
+
+    public String resolveNickname(UUID userId, SimpMessageHeaderAccessor headerAccessor) {
+        Map<String, Object> session = headerAccessor.getSessionAttributes();
+        if (session != null && session.get("sender") != null) {
+            return session.get("sender").toString();
+        }
+        String nickname = getNickName(userId);
+        return nickname != null ? nickname : "unknown";
+    }
+
+    public void appendMessage(String roomId, ChatMessage msg) {
+        String key = "debate:room:" + roomId + ":messages";
+        try {
+            String json = objectMapper.writeValueAsString(msg);
+            redisTemplate.opsForList().rightPush(key, json);
+            // redisTemplate.opsForList().trim(key, -200, -1);
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("Failed to serialize ChatMessage", e);
+        }
     }
 
     /**
