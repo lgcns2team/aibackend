@@ -14,8 +14,10 @@ import lombok.RequiredArgsConstructor;
 import java.security.Principal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
@@ -29,10 +31,11 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/debate")
+@RequestMapping("/api/ai/debate")
 public class DebateController {
 
     private final DebateService debateService;
@@ -47,11 +50,9 @@ public class DebateController {
 
     @GetMapping("/roomList")
     public ResponseEntity<List<DebateRoomResponseDTO>> getRoomsByTeacher(
-            Authentication authentication
-    ) {
+            Authentication authentication) {
         return ResponseEntity.ok(
-            debateService.getRoomsByClassCode(authentication)
-        );
+                debateService.getRoomsByClassCode(authentication));
     }
 
     @MessageMapping("/room/{roomId}/join")
@@ -62,14 +63,18 @@ public class DebateController {
     ) {
         UUID userId = AuthUtils.getUserId(principal);
         debateService.validateJoin(roomId, userId);
-        String nickname = debateService.getNickname(userId);
+        String nickname = debateService.getNickName(userId);
 
-        headerAccessor.getSessionAttributes().put("roomId", roomId);
-        headerAccessor.getSessionAttributes().put("userId", userId.toString());
-        headerAccessor.getSessionAttributes().put("sender", nickname);
+        Map<String, Object> session = headerAccessor.getSessionAttributes();
+        if (session == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "No websocket session");
+        }
+        session.put("roomId", roomId);
+        session.put("userId", userId.toString());
+        session.put("sender", nickname);
 
         ChatMessage out = new ChatMessage();
-        // out.setMessageType(ChatMessage.MessageType.JOIN);
+        out.setType(ChatMessage.MessageType.JOIN);
         out.setUserId(userId);
         out.setSender(nickname);
         out.setCreatedAt(LocalDateTime.now());
@@ -94,5 +99,17 @@ public class DebateController {
         headerAccessor.getSessionAttributes().put("username", chatMessage.getSender());
         headerAccessor.getSessionAttributes().put("roomId", roomId);
         return chatMessage;
+    }
+
+    /**
+     * 토론 주제 추천 API
+     * AWS Bedrock Prompt를 통해 한국 역사 토론 주제를 추천받습니다.
+     */
+    @PostMapping("/topics/recommend")
+    public ResponseEntity<com.lgcns.haibackend.discussion.domain.dto.DebateTopicsResponse> recommendTopics(
+            @RequestBody com.lgcns.haibackend.discussion.domain.dto.DebateTopicsRequest request) {
+        com.lgcns.haibackend.discussion.domain.dto.DebateTopicsResponse response = debateService
+                .getDebateTopicRecommendations(request);
+        return ResponseEntity.ok(response);
     }
 }

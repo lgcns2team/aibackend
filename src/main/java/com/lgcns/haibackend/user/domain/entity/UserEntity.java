@@ -34,8 +34,6 @@ public class UserEntity {
     private Integer classroom;
     private Role role;
 
-    private Integer teacherCode;
-
     @Column(nullable = false, updatable = true, length = 50)
     private String name;
 
@@ -46,7 +44,7 @@ public class UserEntity {
     private String nickname;
 
     @Column
-    private Integer tCode;
+    private Integer teacherCode;
 
     // 토론, AI챗봇, 교과서 그리기 연결 필요
 }

@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import com.lgcns.haibackend.user.domain.entity.UserClassInfo;
 import com.lgcns.haibackend.user.domain.entity.UserEntity;
 
 
@@ -24,4 +25,14 @@ public interface UserRepository extends JpaRepository<UserEntity, UUID> {
 
     @Query("select u.nickname from UserEntity u where u.userId = :userId")
     String findNickNameByUserId(@Param("userId") UUID userId);
+
+    @Query("""
+        select u.classCode as classCode,
+            u.grade as grade,
+            u.classroom as classroom,
+            u.nickname as nickname
+        from UserEntity u
+        where u.userId = :userId
+    """)
+    UserClassInfo findClassInfoByUserId(@Param("userId") UUID userId);
 }
