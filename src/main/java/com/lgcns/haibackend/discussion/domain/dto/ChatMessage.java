@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Getter
@@ -17,11 +18,13 @@ public class ChatMessage {
     private MessageType type;
     private String content;
     private String sender;
-    private String roomId;
     private UUID userId;
+    private DebateStatus status;
+    private LocalDateTime createdAt;
 
     public enum MessageType {
         CHAT,
+        STATUS,
         JOIN,
         LEAVE
     }

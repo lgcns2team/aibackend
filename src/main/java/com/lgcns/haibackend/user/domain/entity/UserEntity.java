@@ -1,10 +1,5 @@
 package com.lgcns.haibackend.user.domain.entity;
 
-import org.hibernate.annotations.CreationTimestamp;
-
-import com.fasterxml.jackson.annotation.JsonBackReference;
-
-import java.time.LocalDateTime;
 import java.util.UUID;
 
 import jakarta.persistence.Column;
@@ -47,7 +42,7 @@ public class UserEntity {
     private String nickname;
 
     @Column
-    private UUID classCode;
+    private Integer tCode;
 
     // 토론, AI챗봇, 교과서 그리기 연결 필요
 }

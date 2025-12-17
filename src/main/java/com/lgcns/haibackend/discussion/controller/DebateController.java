@@ -1,11 +1,18 @@
 package com.lgcns.haibackend.discussion.controller;
 
+import com.lgcns.haibackend.common.security.AuthUtils;
 import com.lgcns.haibackend.discussion.domain.dto.ChatMessage;
 import com.lgcns.haibackend.discussion.domain.dto.DebateRoomRequestDTO;
 import com.lgcns.haibackend.discussion.domain.dto.DebateRoomResponseDTO;
+import com.lgcns.haibackend.discussion.domain.dto.JoinMessage;
+import com.lgcns.haibackend.discussion.domain.dto.ChatMessage.MessageType;
 import com.lgcns.haibackend.discussion.service.DebateService;
+import com.lgcns.haibackend.user.domain.entity.UserEntity;
+
 import lombok.RequiredArgsConstructor;
 
+import java.security.Principal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -15,12 +22,12 @@ import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -29,6 +36,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class DebateController {
 
     private final DebateService debateService;
+    private final SimpMessagingTemplate messagingTemplate;
 
     @PostMapping("/room")
     public ResponseEntity<DebateRoomResponseDTO> createRoom(@RequestBody DebateRoomRequestDTO req,
@@ -46,6 +54,28 @@ public class DebateController {
         );
     }
 
+    @MessageMapping("/room/{roomId}/join")
+    public void join(
+        @DestinationVariable String roomId,
+        SimpMessageHeaderAccessor headerAccessor,
+        Principal principal
+    ) {
+        UUID userId = AuthUtils.getUserId(principal);
+        debateService.validateJoin(roomId, userId);
+        String nickname = debateService.getNickname(userId);
+
+        headerAccessor.getSessionAttributes().put("roomId", roomId);
+        headerAccessor.getSessionAttributes().put("userId", userId.toString());
+        headerAccessor.getSessionAttributes().put("sender", nickname);
+
+        ChatMessage out = new ChatMessage();
+        // out.setMessageType(ChatMessage.MessageType.JOIN);
+        out.setUserId(userId);
+        out.setSender(nickname);
+        out.setCreatedAt(LocalDateTime.now());
+
+        messagingTemplate.convertAndSend("/topic/room/" + roomId, out);
+    }
 
     @MessageMapping("/chat.sendMessage/{roomId}")
     @SendTo("/topic/room/{roomId}")

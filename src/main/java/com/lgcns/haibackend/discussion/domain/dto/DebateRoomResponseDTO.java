@@ -18,7 +18,7 @@ import lombok.Setter;
 public class DebateRoomResponseDTO {
     private UUID roomId;
     private UUID teacherId;
-    private UUID classCode;
+    private Integer tCode;
     private Integer participantCount;
     private String topicTitle;
     private String topicDescription;
@@ -28,7 +28,7 @@ public class DebateRoomResponseDTO {
     return DebateRoomResponseDTO.builder()
             .roomId(UUID.fromString((String) map.get("roomId")))
             .teacherId(UUID.fromString((String) map.get("teacherId")))
-            .classCode(UUID.fromString((String) map.get("classCode")))
+            .tCode(Integer.parseInt((String) map.get("tCode")))
             .participantCount(Integer.parseInt((String) map.getOrDefault("participantCount", "0")))
             .topicTitle((String) map.get("topicTitle"))
             .topicDescription((String) map.get("topicDescription"))

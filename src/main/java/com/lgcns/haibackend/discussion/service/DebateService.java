@@ -43,7 +43,7 @@ public class DebateService {
         UserEntity teacher = userRepository.findByUserId(teacherId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
 
-        UUID classCode = teacher.getClassCode();
+        Integer tCode = teacher.getTCode();
         UUID roomId = UUID.randomUUID();
         LocalDateTime createdAt = LocalDateTime.now();
 
@@ -51,7 +51,7 @@ public class DebateService {
         Map<String, String> roomMap = new HashMap<>();
         roomMap.put("roomId", roomId.toString());
         roomMap.put("teacherId", teacherId.toString());
-        roomMap.put("classCode", classCode.toString());
+        roomMap.put("tCode", tCode.toString());
         roomMap.put("grade", req.getGrade().toString());
         roomMap.put("classroom", req.getClassroom().toString());
         roomMap.put("topicTitle", req.getTopicTitle());
@@ -62,7 +62,7 @@ public class DebateService {
         redisTemplate.opsForHash().putAll(roomKey, roomMap);
 
         // 클래스코드별 토론방
-        String classCodeIndexKey = "debate:classCode:" + classCode + ":rooms";
+        String classCodeIndexKey = "debate:classCode:" + tCode + ":rooms";
         redisTemplate.opsForZSet().add(
             classCodeIndexKey,
             roomId.toString(),
@@ -72,7 +72,7 @@ public class DebateService {
         return DebateRoomResponseDTO.builder()
                         .roomId(roomId)
                         .teacherId(teacherId)
-                        .classCode(classCode)
+                        .tCode(tCode)
                         .participantCount(req.getParticipantCount())
                         .topicTitle(req.getTopicTitle())
                         .topicDescription(req.getTopicDescription())
@@ -87,13 +87,13 @@ public class DebateService {
         UserEntity user = userRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
 
-        UUID classCode = user.getClassCode();
+        Integer tCode = user.getTCode();
 
-        if (classCode == null) {
+        if (tCode == null) {
             return List.of();
         }
 
-        String classIndexKey = "debate:classCode:" + classCode + ":rooms";
+        String classIndexKey = "debate:classCode:" + tCode + ":rooms";
         Set<String> roomIds = redisTemplate.opsForZSet()
                 .reverseRange(classIndexKey, 0, 50);
 
@@ -117,28 +117,24 @@ public class DebateService {
         return activeRooms.get(roomId);
     }
 
-    public void validateJoin(String roomId, UUID studentId) {
-        DebateRoomRequestDTO room = activeRooms.get(roomId);
-        if (room == null) {
-            throw new IllegalArgumentException("Room not found");
+    public void validateJoin(String roomId, UUID userId) {
+       String roomKey = "debate:room:" + roomId;
+        String roomClassCode = (String) redisTemplate.opsForHash().get(roomKey, "classCode");
+        if (roomClassCode == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Room not found");
         }
 
-        UserEntity student = userRepository.findById(studentId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
-
-        // If it's the teacher who owns the room, allow
-        // if (student.getUserId().equals(room.getTeacherId())) {
-        //     return;
-        // }
-
-        if (!"STUDENT".equals(student.getRole())) {
-            // Depending on requirements, maybe other teachers can't join?
-            // For now assume only students and the owner teacher.
-            throw new IllegalArgumentException("Only students can join rooms");
+        UUID userClassCode = userRepository.findClassCodeByUserId(userId);
+        if (userClassCode == null) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No class code");
         }
 
-        // if (!student.getGrade().equals(room.getGrade()) || !student.getClassroom().equals(room.getClassNumber())) {
-        //     throw new IllegalArgumentException("Student does not belong to this teacher's class");
-        // }
+        if (!userClassCode.toString().equals(roomClassCode)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not in this class");
+        }
+    }
+
+    public String getNickname(UUID userId) {
+        return userRepository.findNickNameByUserId(userId);
     }
 }
