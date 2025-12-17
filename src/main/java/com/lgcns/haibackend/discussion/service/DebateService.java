@@ -84,13 +84,16 @@ public class DebateService {
             Authentication auth
     ) {
         UUID userId = AuthUtils.getUserId(auth);
-        UUID classCode = userRepository.findClassCodeByUserId(userId);
+        UserEntity user = userRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
+
+        UUID classCode = user.getClassCode();
 
         if (classCode == null) {
             return List.of();
         }
 
-        String classIndexKey = "debate:class:" + classCode + ":rooms";
+        String classIndexKey = "debate:classCode:" + classCode + ":rooms";
         Set<String> roomIds = redisTemplate.opsForZSet()
                 .reverseRange(classIndexKey, 0, 50);
 
