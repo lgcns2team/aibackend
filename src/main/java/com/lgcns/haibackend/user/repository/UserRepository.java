@@ -19,8 +19,8 @@ public interface UserRepository extends JpaRepository<UserEntity, UUID> {
     public Optional<UserEntity> findByNameAndPassword(String name, String password);
     public Optional<UserEntity> findByUserId(UUID userId);
 
-    @Query("select u.classCode from UserEntity u where u.userId = :userId")
-    UUID findClassCodeByUserId(@Param("userId") UUID userId);
+    @Query("select u.teacherCode from UserEntity u where u.userId = :userId")
+    Integer findTeacherCodeByUserId(@Param("userId") UUID userId);
 
     @Query("select u.nickname from UserEntity u where u.userId = :userId")
     String findNickNameByUserId(@Param("userId") UUID userId);

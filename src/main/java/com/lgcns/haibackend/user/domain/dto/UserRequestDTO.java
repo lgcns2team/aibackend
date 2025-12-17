@@ -2,6 +2,7 @@ package com.lgcns.haibackend.user.domain.dto;
 
 import java.util.UUID;
 
+import com.lgcns.haibackend.common.Role;
 import com.lgcns.haibackend.user.domain.entity.UserEntity;
 
 import lombok.Builder;
@@ -15,7 +16,7 @@ public class UserRequestDTO {
     private String nickname;
     private Integer grade;
     private Integer classroom;
-    private String role;
+    private Role role;
 
     public UserEntity toEntity() {
         return UserEntity.builder()

@@ -2,6 +2,8 @@ package com.lgcns.haibackend.user.domain.entity;
 
 import java.util.UUID;
 
+import com.lgcns.haibackend.common.Role;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -30,7 +32,9 @@ public class UserEntity {
 
     private Integer grade;
     private Integer classroom;
-    private String role;
+    private Role role;
+
+    private Integer teacherCode;
 
     @Column(nullable = false, updatable = true, length = 50)
     private String name;

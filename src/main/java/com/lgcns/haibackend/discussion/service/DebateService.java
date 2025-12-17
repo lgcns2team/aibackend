@@ -43,7 +43,7 @@ public class DebateService {
         UserEntity teacher = userRepository.findByUserId(teacherId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
 
-        Integer tCode = teacher.getTCode();
+        Integer teacherCode = teacher.getTeacherCode();
         UUID roomId = UUID.randomUUID();
         LocalDateTime createdAt = LocalDateTime.now();
 
@@ -51,7 +51,7 @@ public class DebateService {
         Map<String, String> roomMap = new HashMap<>();
         roomMap.put("roomId", roomId.toString());
         roomMap.put("teacherId", teacherId.toString());
-        roomMap.put("tCode", tCode.toString());
+        roomMap.put("teacherCode", teacherCode.toString());
         roomMap.put("grade", req.getGrade().toString());
         roomMap.put("classroom", req.getClassroom().toString());
         roomMap.put("topicTitle", req.getTopicTitle());
@@ -61,10 +61,10 @@ public class DebateService {
 
         redisTemplate.opsForHash().putAll(roomKey, roomMap);
 
-        // 클래스코드별 토론방
-        String classCodeIndexKey = "debate:classCode:" + tCode + ":rooms";
+        // 코드별 토론방
+        String teacherCodeIndexKey = "debate:teacherCode:" + teacherCode + ":rooms";
         redisTemplate.opsForZSet().add(
-            classCodeIndexKey,
+            teacherCodeIndexKey,
             roomId.toString(),
             createdAt.atZone(ZoneId.systemDefault()).toEpochSecond()
         );
@@ -72,7 +72,7 @@ public class DebateService {
         return DebateRoomResponseDTO.builder()
                         .roomId(roomId)
                         .teacherId(teacherId)
-                        .tCode(tCode)
+                        .teacherCode(teacherCode)
                         .participantCount(req.getParticipantCount())
                         .topicTitle(req.getTopicTitle())
                         .topicDescription(req.getTopicDescription())
@@ -87,13 +87,13 @@ public class DebateService {
         UserEntity user = userRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
 
-        Integer tCode = user.getTCode();
+        Integer teacherCode = user.getTeacherCode();
 
-        if (tCode == null) {
+        if (teacherCode == null) {
             return List.of();
         }
 
-        String classIndexKey = "debate:classCode:" + tCode + ":rooms";
+        String classIndexKey = "debate:teacherCode:" + teacherCode + ":rooms";
         Set<String> roomIds = redisTemplate.opsForZSet()
                 .reverseRange(classIndexKey, 0, 50);
 
@@ -124,7 +124,7 @@ public class DebateService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Room not found");
         }
 
-        UUID userClassCode = userRepository.findClassCodeByUserId(userId);
+        Integer userClassCode = userRepository.findTeacherCodeByUserId(userId);
         if (userClassCode == null) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No class code");
         }
