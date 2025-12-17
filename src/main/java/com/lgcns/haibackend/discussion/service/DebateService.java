@@ -5,6 +5,7 @@ import com.lgcns.haibackend.discussion.domain.dto.DebateRoomRequestDTO;
 import com.lgcns.haibackend.discussion.domain.dto.DebateRoomResponseDTO;
 import com.lgcns.haibackend.discussion.domain.dto.DebateTopicsRequest;
 import com.lgcns.haibackend.discussion.domain.dto.DebateTopicsResponse;
+import com.lgcns.haibackend.user.domain.entity.UserClassInfo;
 import com.lgcns.haibackend.user.domain.entity.UserEntity;
 import com.lgcns.haibackend.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -121,19 +122,36 @@ public class DebateService {
     }
 
     public void validateJoin(String roomId, UUID userId) {
-       String roomKey = "debate:room:" + roomId;
-        String roomClassCode = (String) redisTemplate.opsForHash().get(roomKey, "classCode");
-        if (roomClassCode == null) {
+        String roomKey = "debate:room:" + roomId;
+
+        Map<Object, Object> room = redisTemplate.opsForHash().entries(roomKey);
+        if (room == null || room.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Room not found");
         }
 
-        Integer userClassCode = userRepository.findTeacherCodeByUserId(userId);
-        if (userClassCode == null) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No class code");
+        String roomTeacherCode = (String) room.get("teacherCode");
+        String roomGrade = (String) room.get("grade");
+        String roomClassroom = (String) room.get("classroom");
+        if (roomTeacherCode == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Room not found");
         }
 
-        if (!userClassCode.toString().equals(roomClassCode)) {
+        UserClassInfo userInfo = userRepository.findClassInfoByUserId(userId);
+        if (userInfo.getTeacherCode() == null) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No teacher code");
+        }
+
+        if (!userInfo.getTeacherCode().toString().equals(roomTeacherCode)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not in this class");
+        }
+
+        if (roomGrade != null && userInfo.getGrade() != null && !roomGrade.equals(userInfo.getGrade().toString())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Grade mismatch");
+        }
+
+        if (roomClassroom != null && userInfo.getClassroom() != null
+            && !roomClassroom.equals(userInfo.getClassroom().toString())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Classroom mismatch");
         }
     }
 

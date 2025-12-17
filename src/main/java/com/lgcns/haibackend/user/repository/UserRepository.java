@@ -27,7 +27,7 @@ public interface UserRepository extends JpaRepository<UserEntity, UUID> {
     String findNickNameByUserId(@Param("userId") UUID userId);
 
     @Query("""
-        select u.classCode as classCode,
+        select u.teacherCode as teacherCode,
             u.grade as grade,
             u.classroom as classroom,
             u.nickname as nickname

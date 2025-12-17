@@ -28,7 +28,7 @@ spring:
     init:
       mode: always
       encoding: utf-8
-      data-locations: classpath:ai_person_data.sql, classpath:discussion_data.sql 
+      data-locations: classpath:ai_person_data.sql
 
 logging:
   level:

@@ -4,10 +4,7 @@ import com.lgcns.haibackend.common.security.AuthUtils;
 import com.lgcns.haibackend.discussion.domain.dto.ChatMessage;
 import com.lgcns.haibackend.discussion.domain.dto.DebateRoomRequestDTO;
 import com.lgcns.haibackend.discussion.domain.dto.DebateRoomResponseDTO;
-import com.lgcns.haibackend.discussion.domain.dto.JoinMessage;
-import com.lgcns.haibackend.discussion.domain.dto.ChatMessage.MessageType;
 import com.lgcns.haibackend.discussion.service.DebateService;
-import com.lgcns.haibackend.user.domain.entity.UserEntity;
 
 import lombok.RequiredArgsConstructor;
 
