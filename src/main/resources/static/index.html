@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
+    <title>Chat Room Test</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.0/css/bootstrap.min.css" integrity="sha384-9gVQ4dYFwwWSjIDZnLEWnxCjeSWFphJiwGPXr1jddIhOegiu1FwO5qRGvFXOdJZ4" crossorigin="anonymous">
+    <style>
+        .chat-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        #messageArea {
+            height: 300px;
+            overflow-y: scroll;
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+<div class="chat-container">
+    <h2>WebSocket Chat Test</h2>
+    <div class="form-group">
+        <label>User ID (UUID from DB)</label>
+        <input type="text" id="userId" class="form-control" placeholder="Enter User ID">
+    </div>
+    <div class="form-group">
+        <label>Sender Name</label>
+        <input type="text" id="username" class="form-control" placeholder="Enter Username">
+    </div>
+
+    <hr/>
+
+    <h3>Teacher: Create Room</h3>
+    <div class="form-group">
+        <button id="createRoomBtn" class="btn btn-primary" onclick="createRoom()">Create Room</button>
+    </div>
+
+    <hr/>
+
+    <h3>Join Room</h3>
+    <div class="form-group">
+        <label>Room ID</label>
+        <input type="text" id="roomId" class="form-control" placeholder="Enter Room ID">
+    </div>
+    <div class="form-group">
+        <button id="joinRoomBtn" class="btn btn-success" onclick="connect()">Join Room</button>
+    </div>
+
+    <hr/>
+
+    <div id="chat-page" class="hidden">
+        <div class="chat-header">
+            <h4>Chat Room</h4>
+        </div>
+        <ul id="messageArea">
+
+        </ul>
+        <form id="messageForm" name="messageForm" nameForm="messageForm">
+            <div class="form-group">
+                <div class="input-group clearfix">
+                    <input type="text" id="message" placeholder="Type a message..." autocomplete="off" class="form-control"/>
+                    <button type="submit" class="primary">Send</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.1.4/sockjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
