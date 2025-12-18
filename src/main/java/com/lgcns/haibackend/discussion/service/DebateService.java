@@ -109,8 +109,16 @@ public class DebateService {
     }
 
     public List<DebateRoomResponseDTO> getRoomsByClassCode(
-            Authentication auth) {
-        UUID userId = AuthUtils.getUserId(auth);
+            Authentication auth, UUID userIdParam) {
+        UUID userId;
+        if (auth != null && auth.isAuthenticated()) {
+            userId = AuthUtils.getUserId(auth);
+        } else if (userIdParam != null) {
+            userId = userIdParam;
+        } else {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication or userId required");
+        }
+
         UserEntity user = userRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
 

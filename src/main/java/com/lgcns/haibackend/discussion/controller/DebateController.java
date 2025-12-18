@@ -29,6 +29,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -49,9 +50,10 @@ public class DebateController {
 
     @GetMapping("/roomList")
     public ResponseEntity<List<DebateRoomResponseDTO>> getRoomsByTeacher(
-            Authentication authentication) {
+            Authentication authentication,
+            @RequestParam(required = false) UUID userId) {
         return ResponseEntity.ok(
-                debateService.getRoomsByClassCode(authentication));
+                debateService.getRoomsByClassCode(authentication, userId));
     }
 
     @MessageMapping("/room/{roomId}/join")
