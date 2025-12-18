@@ -14,6 +14,9 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @Builder
 public class ChatMessage {
+    private String id;
+    private String parentId;
+    private java.util.UUID userId;
     private MessageType type;
     private String content;
     private String sender;

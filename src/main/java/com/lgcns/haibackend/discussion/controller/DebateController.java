@@ -56,13 +56,31 @@ public class DebateController {
 
     @MessageMapping("/room/{roomId}/join")
     public void join(
-        @DestinationVariable String roomId,
-        SimpMessageHeaderAccessor headerAccessor,
-        Principal principal
-    ) {
-        UUID userId = AuthUtils.getUserId(principal);
+            @DestinationVariable String roomId,
+            @Payload Map<String, String> payload,
+            SimpMessageHeaderAccessor headerAccessor,
+            Principal principal) {
+        UUID userId = null;
+        if (payload != null && payload.containsKey("userId")) {
+            try {
+                userId = UUID.fromString(payload.get("userId"));
+            } catch (Exception e) {
+                // Ignore invalid UUID
+            }
+        }
+        if (userId == null) {
+            userId = AuthUtils.getUserId(principal);
+        }
+
         debateService.validateJoin(roomId, userId);
         String nickname = debateService.getNickName(userId);
+
+        // If nickname is null (Guest), try to get from payload
+        if (nickname == null && payload != null && payload.containsKey("sender")) {
+            nickname = payload.get("sender");
+        }
+        if (nickname == null)
+            nickname = "Guest";
 
         Map<String, Object> session = headerAccessor.getSessionAttributes();
         if (session == null) {
@@ -82,45 +100,87 @@ public class DebateController {
 
     @MessageMapping("/room/{roomId}/status")
     public void selectStatus(
-        @DestinationVariable String roomId,
-        @Payload StatusSelectMessage msg,
-        SimpMessageHeaderAccessor headerAccessor,
-        Principal principal
-    ) {
-        UUID userId = AuthUtils.getUserId(principal);
+            @DestinationVariable String roomId,
+            @Payload StatusSelectMessage msg,
+            SimpMessageHeaderAccessor headerAccessor,
+            Principal principal) {
+        UUID userId = msg.getUserId();
+
+        if (userId == null) {
+            Map<String, Object> session = headerAccessor.getSessionAttributes();
+            if (session != null && session.containsKey("userId")) {
+                try {
+                    userId = UUID.fromString((String) session.get("userId"));
+                } catch (Exception e) {
+                }
+            }
+        }
+
+        if (userId == null) {
+            try {
+                userId = AuthUtils.getUserId(principal);
+            } catch (Exception e) {
+                // Ignore auth error if we just want to fail later or handle guests
+            }
+        }
+
+        if (userId == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User ID not found");
+        }
 
         debateService.validateJoin(roomId, userId);
 
         // status 저장
         debateService.saveStatus(roomId, userId, msg.getStatus());
 
-        // 세션에 저장
-        Map<String, Object> session = headerAccessor.getSessionAttributes();
-        if (session != null) {
-            session.put("status", msg.getStatus().name());
+        if (headerAccessor.getSessionAttributes() != null) {
+            headerAccessor.getSessionAttributes().put("status", msg.getStatus().name());
         }
 
-        String nickname = (String) (session != null ? session.get("sender") : null);
-        if (nickname == null) nickname = debateService.getNickName(userId);
+        String nickname = (String) (headerAccessor.getSessionAttributes() != null
+                ? headerAccessor.getSessionAttributes().get("sender")
+                : null);
+        if (nickname == null)
+            nickname = debateService.getNickName(userId);
 
         ChatMessage out = ChatMessage.builder()
-            .type(ChatMessage.MessageType.STATUS)
-            .sender(nickname)
-            .status(msg.getStatus())
-            .createdAt(LocalDateTime.now())
-            .build();
+                .type(ChatMessage.MessageType.STATUS)
+                .sender(nickname)
+                .status(msg.getStatus())
+                .createdAt(LocalDateTime.now())
+                .build();
 
         messagingTemplate.convertAndSend("/topic/room/" + roomId, out);
     }
 
     @MessageMapping("/room/{roomId}/chat")
     public void sendMessage(
-        @DestinationVariable String roomId,
-        @Payload ChatMessage incoming,
-        SimpMessageHeaderAccessor headerAccessor,
-        Principal principal
-    ) {
-        UUID userId = AuthUtils.getUserId(principal);
+            @DestinationVariable String roomId,
+            @Payload ChatMessage incoming,
+            SimpMessageHeaderAccessor headerAccessor,
+            Principal principal) {
+        UUID userId = incoming.getUserId();
+
+        if (userId == null) {
+            Map<String, Object> session = headerAccessor.getSessionAttributes();
+            if (session != null && session.containsKey("userId")) {
+                try {
+                    userId = UUID.fromString((String) session.get("userId"));
+                } catch (Exception e) {
+                }
+            }
+        }
+
+        if (userId == null) {
+            try {
+                userId = AuthUtils.getUserId(principal);
+            } catch (Exception e) {
+            }
+        }
+
+        if (userId == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User ID not found");
+        }
 
         debateService.validateJoin(roomId, userId);
 
@@ -129,12 +189,15 @@ public class DebateController {
         String sender = debateService.resolveNickname(userId, headerAccessor);
 
         ChatMessage out = ChatMessage.builder()
-            .type(ChatMessage.MessageType.CHAT)
-            .content(incoming.getContent())
-            .sender(sender)
-            .status(status)
-            .createdAt(LocalDateTime.now())
-            .build();
+                .id(UUID.randomUUID().toString())
+                .parentId(incoming.getParentId())
+                .userId(userId)
+                .type(ChatMessage.MessageType.CHAT)
+                .content(incoming.getContent())
+                .sender(sender)
+                .status(status)
+                .createdAt(LocalDateTime.now())
+                .build();
 
         debateService.appendMessage(roomId, out);
         messagingTemplate.convertAndSend("/topic/room/" + roomId, out);
@@ -142,21 +205,24 @@ public class DebateController {
 
     // @MessageMapping("/chat.sendMessage/{roomId}")
     // @SendTo("/topic/room/{roomId}")
-    // public ChatMessage sendMessage(@DestinationVariable String roomId, @Payload ChatMessage chatMessage) {
-    //     return chatMessage;
+    // public ChatMessage sendMessage(@DestinationVariable String roomId, @Payload
+    // ChatMessage chatMessage) {
+    // return chatMessage;
     // }
 
     // @MessageMapping("/chat.addUser/{roomId}")
     // @SendTo("/topic/room/{roomId}")
-    // public ChatMessage addUser(@DestinationVariable String roomId, @Payload ChatMessage chatMessage,
-    //         SimpMessageHeaderAccessor headerAccessor) {
-    //     // Validate join logic
-    //     debateService.validateJoin(roomId, chatMessage.getUserId());
+    // public ChatMessage addUser(@DestinationVariable String roomId, @Payload
+    // ChatMessage chatMessage,
+    // SimpMessageHeaderAccessor headerAccessor) {
+    // // Validate join logic
+    // debateService.validateJoin(roomId, chatMessage.getUserId());
 
-    //     // Add username and roomId in web socket session
-    //     headerAccessor.getSessionAttributes().put("username", chatMessage.getSender());
-    //     headerAccessor.getSessionAttributes().put("roomId", roomId);
-    //     return chatMessage;
+    // // Add username and roomId in web socket session
+    // headerAccessor.getSessionAttributes().put("username",
+    // chatMessage.getSender());
+    // headerAccessor.getSessionAttributes().put("roomId", roomId);
+    // return chatMessage;
     // }
 
     /**

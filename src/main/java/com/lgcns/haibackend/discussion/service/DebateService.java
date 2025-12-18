@@ -157,6 +157,11 @@ public class DebateService {
         }
 
         UserClassInfo userInfo = userRepository.findClassInfoByUserId(userId);
+        if (userInfo == null) {
+            // Guest user or user not found - Allow for now or handle differently
+            return;
+        }
+
         if (userInfo.getTeacherCode() == null) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No teacher code");
         }
@@ -185,19 +190,19 @@ public class DebateService {
     }
 
     public DebateStatus requireStatusSelected(String roomId, UUID userId, SimpMessageHeaderAccessor headerAccessor) {
-    // 세션에 있으면 우선 사용
-    Map<String, Object> session = headerAccessor.getSessionAttributes();
-    if (session != null && session.get("status") != null) {
-        return DebateStatus.valueOf(session.get("status").toString());
-    }
+        // 세션에 있으면 우선 사용
+        Map<String, Object> session = headerAccessor.getSessionAttributes();
+        if (session != null && session.get("status") != null) {
+            return DebateStatus.valueOf(session.get("status").toString());
+        }
 
-    // Redis에서 확인
-    String key = "debate:room:" + roomId + ":status";
-    Object v = redisTemplate.opsForHash().get(key, userId.toString());
-    if (v == null) {
-        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Select PRO/CON first");
-    }
-    return DebateStatus.valueOf(v.toString());
+        // Redis에서 확인
+        String key = "debate:room:" + roomId + ":status";
+        Object v = redisTemplate.opsForHash().get(key, userId.toString());
+        if (v == null) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Select PRO/CON first");
+        }
+        return DebateStatus.valueOf(v.toString());
     }
 
     public String resolveNickname(UUID userId, SimpMessageHeaderAccessor headerAccessor) {
