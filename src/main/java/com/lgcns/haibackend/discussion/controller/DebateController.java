@@ -232,6 +232,26 @@ public class DebateController {
      * AWS Bedrock Prompt를 통해 한국 역사 토론 주제를 추천받습니다.
      */
     @PostMapping("/topics/recommend")
+ 
+    @MessageMapping("/room/{roomId}/mode")
+    public void updateMode(
+            @DestinationVariable String roomId,
+            @Payload Map<String, String> payload,
+            Principal principal) {
+        // Teacher validation could be added here
+        String newMode = payload.get("viewMode");
+        if (newMode == null) return;
+
+        debateService.updateRoomMode(roomId, newMode);
+
+        ChatMessage out = ChatMessage.builder()
+                .type(ChatMessage.MessageType.MODE_CHANGE)
+                .content(newMode)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        messagingTemplate.convertAndSend("/topic/room/" + roomId, out);
+    }
     public ResponseEntity<com.lgcns.haibackend.discussion.domain.dto.DebateTopicsResponse> recommendTopics(
             @RequestBody com.lgcns.haibackend.discussion.domain.dto.DebateTopicsRequest request) {
         com.lgcns.haibackend.discussion.domain.dto.DebateTopicsResponse response = debateService

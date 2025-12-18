@@ -87,6 +87,7 @@ public class DebateService {
         roomMap.put("topicDescription", req.getTopicDescription());
         roomMap.put("participantCount", req.getParticipantCount().toString());
         roomMap.put("createdAt", createdAt.toString());
+        roomMap.put("viewMode", "vote");
 
         redisTemplate.opsForHash().putAll(roomKey, roomMap);
 
@@ -105,6 +106,7 @@ public class DebateService {
                 .topicTitle(req.getTopicTitle())
                 .topicDescription(req.getTopicDescription())
                 .createdAt(createdAt)
+                .viewMode("vote")
                 .build();
     }
 
@@ -213,6 +215,11 @@ public class DebateService {
         return DebateStatus.valueOf(v.toString());
     }
 
+ 
+    public void updateRoomMode(String roomId, String viewMode) {
+        String roomKey = "debate:room:" + roomId;
+        redisTemplate.opsForHash().put(roomKey, "viewMode", viewMode);
+    }
     public String resolveNickname(UUID userId, SimpMessageHeaderAccessor headerAccessor) {
         Map<String, Object> session = headerAccessor.getSessionAttributes();
         if (session != null && session.get("sender") != null) {
