@@ -14,10 +14,51 @@ import java.util.List;
 @AllArgsConstructor
 public class DebateSummaryResponse {
 
-    private String summary;
+    private Summary summary;
 
-    @JsonProperty("key_points")
-    private List<String> keyPoints;
+    @JsonProperty("alternative_outcomes")
+    private List<AlternativeOutcome> alternativeOutcomes;
 
-    private String conclusion;
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class Summary {
+        @JsonProperty("position_1")
+        private Position position1;
+
+        @JsonProperty("position_2")
+        private Position position2;
+
+        @JsonProperty("position_3")
+        private Position position3;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class Position {
+        private String stance;
+
+        @JsonProperty("key_argument")
+        private String keyArgument;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class AlternativeOutcome {
+        private String scenario;
+
+        @JsonProperty("short_term_impact")
+        private String shortTermImpact;
+
+        @JsonProperty("long_term_impact")
+        private String longTermImpact;
+
+        @JsonProperty("historical_implications")
+        private String historicalImplications;
+    }
 }

@@ -422,11 +422,26 @@ public class DebateService {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "AI 분석 응답을 받지 못했습니다.");
         }
 
+        // 4.1. 응답 전처리 (마크다운 코드 블록 제거 및 JSON 추출)
+        String jsonResponse = completeResponse;
+        if (jsonResponse.contains("```")) {
+            jsonResponse = jsonResponse.replace("```json", "").replace("```", "");
+        }
+
+        int start = jsonResponse.indexOf("{");
+        int end = jsonResponse.lastIndexOf("}");
+        if (start != -1 && end != -1 && start < end) {
+            jsonResponse = jsonResponse.substring(start, end + 1);
+        } else {
+            jsonResponse = jsonResponse.trim();
+        }
+
         // 5. JSON 파싱
         try {
-            return objectMapper.readValue(completeResponse,
+            return objectMapper.readValue(jsonResponse,
                     com.lgcns.haibackend.discussion.domain.dto.DebateSummaryResponse.class);
         } catch (Exception e) {
+            System.err.println("JSON Parse Error. Raw: " + completeResponse);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
                     "AI 응답 파싱 실패: " + e.getMessage());
         }
