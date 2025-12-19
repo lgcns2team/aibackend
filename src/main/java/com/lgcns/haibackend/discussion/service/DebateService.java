@@ -2,6 +2,7 @@ package com.lgcns.haibackend.discussion.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.lgcns.haibackend.common.Role;
 import com.lgcns.haibackend.common.security.AuthUtils;
 import com.lgcns.haibackend.discussion.domain.dto.ChatMessage;
 import com.lgcns.haibackend.discussion.domain.dto.DebateRoomRequestDTO;
@@ -46,16 +47,28 @@ public class DebateService {
     private final ObjectMapper objectMapper;
     private final Map<UUID, DebateRoomRequestDTO> activeRooms = new ConcurrentHashMap<>();
 
-    public boolean validateTeacher(Authentication auth) {
-        if (auth == null || !AuthUtils.hasRole(auth, "TEACHER")) {
+    public boolean isTeacher(UUID userId) {
+        UserEntity user = userRepository.findByUserId(userId)
+                .orElseThrow(() ->
+                        new ResponseStatusException(
+                                HttpStatus.UNAUTHORIZED,
+                                "User not found: " + userId
+                        )
+                );
+
+        return user.getRole() == Role.TEACHER;
+    }
+
+    public void validateTeacher(UUID userId) {
+        if (!isTeacher(userId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "선생님만 접근할 수 있습니다.");
         }
-        return true; // 검증 통과 시 true 반환
     }
 
     public DebateRoomResponseDTO createRoom(DebateRoomRequestDTO req, Authentication auth) {
 
-        validateTeacher(auth);
+        UUID userId = AuthUtils.getUserId(auth);
+        validateTeacher(userId);
         
         UUID teacherId = AuthUtils.getUserId(auth);
         UserEntity teacher = userRepository.findByUserId(teacherId)
@@ -202,6 +215,7 @@ public class DebateService {
     }
 
     public void validateJoin(String roomId, UUID userId) {
+
         String roomKey = "debate:room:" + roomId;
 
         Map<Object, Object> room = redisTemplate.opsForHash().entries(roomKey);
@@ -225,18 +239,23 @@ public class DebateService {
         if (userInfo.getTeacherCode() == null) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No teacher code");
         }
-
+        
         if (!userInfo.getTeacherCode().toString().equals(roomTeacherCode)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not in this class");
         }
-
-        if (roomGrade != null && userInfo.getGrade() != null && !roomGrade.equals(userInfo.getGrade().toString())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Grade mismatch");
-        }
-
-        if (roomClassroom != null && userInfo.getClassroom() != null
-                && !roomClassroom.equals(userInfo.getClassroom().toString())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Classroom mismatch");
+        
+        boolean teacher = isTeacher(userId);
+        if (!teacher) {
+            if (roomGrade != null) {
+                if (userInfo.getGrade() == null || !roomGrade.equals(userInfo.getGrade().toString())) {
+                    throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Grade mismatch");
+                }
+            }
+            if (roomClassroom != null) {
+                if (userInfo.getClassroom() == null || !roomClassroom.equals(userInfo.getClassroom().toString())) {
+                    throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Classroom mismatch");
+                }
+            }
         }
     }
 
@@ -308,7 +327,8 @@ public class DebateService {
     }
 
     public void deleteRoom(Integer teacherCode, String roomId, Authentication auth) {
-        validateTeacher(auth);
+        UUID userId = AuthUtils.getUserId(auth);
+        validateTeacher(userId);
         
         String messagesKey = "debate:room:" + roomId + ":messages";
         String roomKey = "debate:room:" + roomId;
