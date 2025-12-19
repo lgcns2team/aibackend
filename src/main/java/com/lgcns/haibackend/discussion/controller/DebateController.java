@@ -7,11 +7,14 @@ import com.lgcns.haibackend.discussion.domain.dto.DebateRoomResponseDTO;
 import com.lgcns.haibackend.discussion.domain.dto.DebateStatus;
 import com.lgcns.haibackend.discussion.domain.dto.StatusSelectMessage;
 import com.lgcns.haibackend.discussion.service.DebateService;
+import com.lgcns.haibackend.util.JwtProvider;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import java.security.Principal;
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -23,7 +26,9 @@ import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -37,10 +42,12 @@ import org.springframework.web.server.ResponseStatusException;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/ai/debate")
+@Slf4j
 public class DebateController {
 
     private final DebateService debateService;
     private final SimpMessagingTemplate messagingTemplate;
+    private final JwtProvider jwtProvider;
 
     @PostMapping("/room")
     public ResponseEntity<DebateRoomResponseDTO> createRoom(@RequestBody DebateRoomRequestDTO req,
@@ -84,19 +91,38 @@ public class DebateController {
     public void join(
             @DestinationVariable String roomId,
             @Payload Map<String, String> payload,
-            SimpMessageHeaderAccessor headerAccessor,
-            Principal principal) {
-        UUID userId = null;
-        if (payload != null && payload.containsKey("userId")) {
-            try {
-                userId = UUID.fromString(payload.get("userId"));
-            } catch (Exception e) {
-                // Ignore invalid UUID
+            SimpMessageHeaderAccessor headerAccessor) {
+        UsernamePasswordAuthenticationToken auth = 
+            (UsernamePasswordAuthenticationToken) headerAccessor.getUser();
+        
+        if (auth == null || auth.getPrincipal() == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication required");
+        }
+
+        if (auth == null && payload != null && payload.containsKey("token")) {
+        try {
+            String token = payload.get("token");
+            String userId = jwtProvider.getUserIdFromToken(token);
+            String role = jwtProvider.getRoleFromToken(token);
+            
+            auth = new UsernamePasswordAuthenticationToken(
+                userId,
+                null,
+                Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + role))
+            );
+            
+            headerAccessor.setUser(auth);
+            if (headerAccessor.getSessionAttributes() != null) {
+                headerAccessor.getSessionAttributes().put("STOMP_AUTH", auth);
             }
+            
+            log.info("임시 인증 처리: userId={}", userId);
+        } catch (Exception e) {
+            log.error("토큰 파싱 실패", e);
         }
-        if (userId == null) {
-            userId = AuthUtils.getUserId(principal);
-        }
+    }
+        
+        UUID userId = UUID.fromString(auth.getPrincipal().toString());
 
         debateService.validateJoin(roomId, userId);
         String nickname = debateService.getNickName(userId);
@@ -128,9 +154,16 @@ public class DebateController {
     public void selectStatus(
             @DestinationVariable String roomId,
             @Payload StatusSelectMessage msg,
-            SimpMessageHeaderAccessor headerAccessor,
-            Principal principal) {
-        UUID userId = AuthUtils.getUserId(principal);
+            SimpMessageHeaderAccessor headerAccessor) {
+        UsernamePasswordAuthenticationToken auth =
+                (UsernamePasswordAuthenticationToken) headerAccessor.getUser();
+
+        if (auth == null || auth.getPrincipal() == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication required");
+        }
+
+        UUID userId = UUID.fromString(auth.getPrincipal().toString());
+
 
         if (userId == null) {
             Map<String, Object> session = headerAccessor.getSessionAttributes();
@@ -175,13 +208,16 @@ public class DebateController {
     public void sendMessage(
             @DestinationVariable String roomId,
             @Payload ChatMessage incoming,
-            SimpMessageHeaderAccessor headerAccessor,
-            Principal principal) {
-        UUID userId = incoming.getUserId();
+            SimpMessageHeaderAccessor headerAccessor) {
+        UsernamePasswordAuthenticationToken auth =
+                (UsernamePasswordAuthenticationToken) headerAccessor.getUser();
 
-        if (userId == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User ID not found");
+        if (auth == null || auth.getPrincipal() == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication required");
         }
+
+        UUID userId = UUID.fromString(auth.getPrincipal().toString());
+
 
         debateService.validateJoin(roomId, userId);
 
@@ -208,7 +244,18 @@ public class DebateController {
     public void updateMode(
             @DestinationVariable String roomId,
             @Payload Map<String, String> payload,
-            Principal principal) {
+            SimpMessageHeaderAccessor headerAccessor) {
+
+        UsernamePasswordAuthenticationToken auth =
+                (UsernamePasswordAuthenticationToken) headerAccessor.getUser();
+
+        if (auth == null || auth.getPrincipal() == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication required");
+        }
+
+        UUID userId = UUID.fromString(auth.getPrincipal().toString());
+
+
         // Teacher validation could be added here
         String newMode = payload.get("viewMode");
         if (newMode == null)
