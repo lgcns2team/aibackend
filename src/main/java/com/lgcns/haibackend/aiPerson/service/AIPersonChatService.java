@@ -1,6 +1,7 @@
 package com.lgcns.haibackend.aiPerson.service;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -80,4 +81,12 @@ public class AIPersonChatService {
     private String buildAIPersonKey(String promptId, UUID userId) {
         return String.format("aiperson:chat:%s:%s", promptId, userId);
     }
+
+    // 특정 AI 인물과의 대화 히스토리 조회
+    public List<MessageDTO> getChatHistory(String promptId, UUID userId) {
+    String historyKey = "aiperson:chat:" + promptId + ":" + userId.toString();
+    
+    // RedisChatRepository를 통해 메시지 리스트를 가져옵니다.
+    return redisChatRepository.getMessages(historyKey);
+}
 }

@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -88,7 +89,7 @@ public class BedrockService {
         }
 
         /**
-         * Bedrock Prompt 기반 채팅 - 변수 포함 ⭐ 새로 추가
+         * Bedrock Prompt 기반 채팅 - 변수 포함
          * 
          * @param promptId 프롬프트 ID
          * @param userQuery 사용자 질문
@@ -133,4 +134,13 @@ public class BedrockService {
                                         log.info("🔗 [AIPERSON PROMPT CHAT SUBSCRIBED] Starting stream...");
                                 });
         }
+
+        // 챗봇 대화 히스토리 조회
+        public List<MessageDTO> getChatbotHistory(UUID userId) {
+                String historyKey = "chatbot:chat:" + userId.toString();
+                log.info("[CHATBOT HISTORY] Fetching history for user: {}", userId);
+                
+                return redisChatRepository.getMessages(historyKey);
+        }
+
 }

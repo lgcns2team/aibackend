@@ -1,5 +1,6 @@
 package com.lgcns.haibackend.bedrock.controller;
 
+import com.lgcns.haibackend.bedrock.domain.dto.MessageDTO;
 import com.lgcns.haibackend.bedrock.service.BedrockService;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -85,6 +86,18 @@ public class BedrockController {
         return ResponseEntity.ok(Map.of(
                 "status", isHealthy ? "healthy" : "unhealthy",
                 "fastapi_gateway", isHealthy ? "connected" : "disconnected"));
+    }
+
+    // 챗봇 대화 히스토리 조회
+    @GetMapping("/chat/history")
+    public ResponseEntity<List<MessageDTO>> getChatbotHistory(Authentication authentication) {
+        
+        UUID userId = UUID.fromString(authentication.getPrincipal().toString());
+        log.info("[CHATBOT HISTORY REQUEST] UserID: {}", userId);
+        
+        List<MessageDTO> history = bedrockService.getChatbotHistory(userId);
+        
+        return ResponseEntity.ok(history);
     }
 
     // ===== DTO 클래스들 =====

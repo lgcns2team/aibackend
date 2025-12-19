@@ -34,5 +34,4 @@ public class AIPersonService {
 
         return AIPersonDetailDTO.fromEntity(entity);
     }
-
 }
