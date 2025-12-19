@@ -50,14 +50,6 @@ public class DebateController {
         return ResponseEntity.ok(room);
     }
 
-    @org.springframework.web.bind.annotation.DeleteMapping("/room/{roomId}")
-    public ResponseEntity<Void> deleteRoom(
-            @org.springframework.web.bind.annotation.PathVariable("roomId") String roomId,
-            Authentication authentication) {
-        debateService.deleteRoom(roomId, authentication);
-        return ResponseEntity.noContent().build();
-    }
-
     @GetMapping("/roomList")
     public ResponseEntity<List<DebateRoomResponseDTO>> getRoomsByTeacher(
             Authentication authentication,
