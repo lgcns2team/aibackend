@@ -45,11 +45,16 @@ public class DebateService {
     private final ObjectMapper objectMapper;
     private final Map<UUID, DebateRoomRequestDTO> activeRooms = new ConcurrentHashMap<>();
 
+    public boolean validateTeacher(Authentication auth) {
+        if (auth == null || !AuthUtils.hasRole(auth, "TEACHER")) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "선생님만 접근할 수 있습니다.");
+        }
+        return true; // 검증 통과 시 true 반환
+    }
+
     public DebateRoomResponseDTO createRoom(DebateRoomRequestDTO req, Authentication auth) {
 
-        if (!AuthUtils.hasRole(auth, "TEACHER")) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "선생님만 토론방을 생성할 수 있습니다.");
-        }
+        validateTeacher(auth);
 
         UUID teacherId = AuthUtils.getUserId(auth);
 
@@ -204,6 +209,19 @@ public class DebateService {
             throw new IllegalStateException("Failed to serialize ChatMessage", e);
         }
     }
+
+    public void deleteRoom(Integer teacherCode, String roomId, Authentication auth) {
+        validateTeacher(auth);
+        
+        String messagesKey = "debate:room:" + roomId + ":messages";
+        String roomKey = "debate:room:" + roomId;
+        String teacherRoomsKey = "debate:teacherCode:" + teacherCode + ":rooms";
+
+        redisTemplate.delete(messagesKey);
+        redisTemplate.delete(roomKey);
+        redisTemplate.opsForZSet().remove(teacherRoomsKey, roomId);
+    }
+
 
     /**
      * 토론 주제 추천 받기
