@@ -22,6 +22,4 @@ public class DebateRoomRequestDTO {
     private String topicDescription;
     private Integer grade;
     private Integer classroom;
-    private UUID teacherId;
-
 }
