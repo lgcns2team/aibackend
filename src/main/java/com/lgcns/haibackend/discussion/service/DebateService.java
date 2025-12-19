@@ -215,11 +215,11 @@ public class DebateService {
         return DebateStatus.valueOf(v.toString());
     }
 
- 
     public void updateRoomMode(String roomId, String viewMode) {
         String roomKey = "debate:room:" + roomId;
         redisTemplate.opsForHash().put(roomKey, "viewMode", viewMode);
     }
+
     public String resolveNickname(UUID userId, SimpMessageHeaderAccessor headerAccessor) {
         Map<String, Object> session = headerAccessor.getSessionAttributes();
         if (session != null && session.get("sender") != null) {
@@ -227,6 +227,23 @@ public class DebateService {
         }
         String nickname = getNickName(userId);
         return nickname != null ? nickname : "unknown";
+    }
+
+    public List<ChatMessage> getMessages(String roomId) {
+        String key = "debate:room:" + roomId + ":messages";
+        List<String> rawMessages = redisTemplate.opsForList().range(key, 0, -1);
+
+        List<ChatMessage> messages = new ArrayList<>();
+        if (rawMessages != null) {
+            for (String json : rawMessages) {
+                try {
+                    messages.add(objectMapper.readValue(json, ChatMessage.class));
+                } catch (JsonProcessingException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        return messages;
     }
 
     public void appendMessage(String roomId, ChatMessage msg) {

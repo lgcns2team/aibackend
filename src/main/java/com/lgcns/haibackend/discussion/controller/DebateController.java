@@ -56,6 +56,12 @@ public class DebateController {
                 debateService.getRoomsByClassCode(authentication, userId));
     }
 
+    @GetMapping("/room/{roomId}/messages")
+    public ResponseEntity<List<ChatMessage>> getRoomMessages(
+            @org.springframework.web.bind.annotation.PathVariable("roomId") String roomId) {
+        return ResponseEntity.ok(debateService.getMessages(roomId));
+    }
+
     @MessageMapping("/room/{roomId}/join")
     public void join(
             @DestinationVariable String roomId,
@@ -232,7 +238,7 @@ public class DebateController {
      * AWS Bedrock Prompt를 통해 한국 역사 토론 주제를 추천받습니다.
      */
     @PostMapping("/topics/recommend")
- 
+
     @MessageMapping("/room/{roomId}/mode")
     public void updateMode(
             @DestinationVariable String roomId,
@@ -240,7 +246,8 @@ public class DebateController {
             Principal principal) {
         // Teacher validation could be added here
         String newMode = payload.get("viewMode");
-        if (newMode == null) return;
+        if (newMode == null)
+            return;
 
         debateService.updateRoomMode(roomId, newMode);
 
@@ -252,6 +259,7 @@ public class DebateController {
 
         messagingTemplate.convertAndSend("/topic/room/" + roomId, out);
     }
+
     public ResponseEntity<com.lgcns.haibackend.discussion.domain.dto.DebateTopicsResponse> recommendTopics(
             @RequestBody com.lgcns.haibackend.discussion.domain.dto.DebateTopicsRequest request) {
         com.lgcns.haibackend.discussion.domain.dto.DebateTopicsResponse response = debateService
