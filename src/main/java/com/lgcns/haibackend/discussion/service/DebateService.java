@@ -26,6 +26,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -49,32 +50,20 @@ public class DebateService {
     private final ObjectMapper objectMapper;
     private final Map<UUID, DebateRoomRequestDTO> activeRooms = new ConcurrentHashMap<>();
 
-    public DebateRoomResponseDTO createRoom(DebateRoomRequestDTO req, Authentication auth) {
-        UUID teacherId;
-        UserEntity teacher;
-        if (auth == null || !auth.isAuthenticated()) {
-            if (req.getTeacherId() != null) {
-                teacherId = req.getTeacherId();
-                teacher = userRepository.findByUserId(teacherId)
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED,
-                                "Provided Teacher User via ID not found"));
-
-                if (!"TEACHER".equals(teacher.getRole().toString())) {
-                    throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                            "Provided User is not a TEACHER");
-                }
-            } else {
-                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,
-                        "Authentication required or teacherId must be provided");
-            }
-        } else {
-            if (!AuthUtils.hasRole(auth, "TEACHER")) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "선생님만 토론방을 생성할 수 있습니다.");
-            }
-            teacherId = AuthUtils.getUserId(auth);
-            teacher = userRepository.findByUserId(teacherId)
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
+    public boolean validateTeacher(Authentication auth) {
+        if (auth == null || !AuthUtils.hasRole(auth, "TEACHER")) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "선생님만 접근할 수 있습니다.");
         }
+        return true; // 검증 통과 시 true 반환
+    }
+
+    public DebateRoomResponseDTO createRoom(DebateRoomRequestDTO req, Authentication auth) {
+
+        validateTeacher(auth);
+        
+        UUID teacherId = AuthUtils.getUserId(auth);
+        UserEntity teacher = userRepository.findByUserId(teacherId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
 
         Integer teacherCode = teacher.getTeacherCode();
         UUID roomId = UUID.randomUUID();
@@ -185,6 +174,33 @@ public class DebateService {
         return result;
     }
 
+    public List<ChatMessage> getMessages(String roomId, int page, int size) {
+        String key = "debate:room:" + roomId + ":messages";
+        int p = Math.max(0, page);
+        int s = Math.max(1, Math.min(size, 200));
+
+        Long totalLong = redisTemplate.opsForList().size(key);
+        long total = (totalLong == null) ? 0 : totalLong;
+        if (total == 0) return List.of();
+
+        long end = total - 1 - ((long) p * s);
+        long start = Math.max(0, end - (s - 1));
+        if (end < 0) return List.of();
+
+        List<String> jsonList = redisTemplate.opsForList().range(key, start, end);
+        if (jsonList == null || jsonList.isEmpty()) return List.of();
+
+        List<ChatMessage> result = new ArrayList<>(jsonList.size());
+        for (String json : jsonList) {
+            try { result.add(objectMapper.readValue(json, ChatMessage.class)); }
+            catch (Exception ignored) {}
+        }
+
+        Collections.reverse(result);
+        return result;
+    }
+
+
     public DebateRoomRequestDTO getRoom(String roomId) {
         return activeRooms.get(roomId);
     }
@@ -294,6 +310,19 @@ public class DebateService {
             throw new IllegalStateException("Failed to serialize ChatMessage", e);
         }
     }
+
+    public void deleteRoom(Integer teacherCode, String roomId, Authentication auth) {
+        validateTeacher(auth);
+        
+        String messagesKey = "debate:room:" + roomId + ":messages";
+        String roomKey = "debate:room:" + roomId;
+        String teacherRoomsKey = "debate:teacherCode:" + teacherCode + ":rooms";
+
+        redisTemplate.delete(messagesKey);
+        redisTemplate.delete(roomKey);
+        redisTemplate.opsForZSet().remove(teacherRoomsKey, roomId);
+    }
+
 
     /**
      * 토론 주제 추천 받기
