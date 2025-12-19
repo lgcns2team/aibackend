@@ -284,4 +284,10 @@ public class DebateController {
                 .getDebateTopicRecommendations(request);
         return ResponseEntity.ok(response);
     }
+
+    @PostMapping("/room/{roomId}/analyze")
+    public ResponseEntity<com.lgcns.haibackend.discussion.domain.dto.DebateSummaryResponse> analyzeDebate(
+            @org.springframework.web.bind.annotation.PathVariable("roomId") String roomId) {
+        return ResponseEntity.ok(debateService.getDebateAnalysis(roomId));
+    }
 }
