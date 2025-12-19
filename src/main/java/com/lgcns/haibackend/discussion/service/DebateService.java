@@ -46,32 +46,20 @@ public class DebateService {
     private final ObjectMapper objectMapper;
     private final Map<UUID, DebateRoomRequestDTO> activeRooms = new ConcurrentHashMap<>();
 
-    public DebateRoomResponseDTO createRoom(DebateRoomRequestDTO req, Authentication auth) {
-        UUID teacherId;
-        UserEntity teacher;
-        if (auth == null || !auth.isAuthenticated()) {
-            if (req.getTeacherId() != null) {
-                teacherId = req.getTeacherId();
-                teacher = userRepository.findByUserId(teacherId)
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED,
-                                "Provided Teacher User via ID not found"));
-
-                if (!"TEACHER".equals(teacher.getRole().toString())) {
-                    throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                            "Provided User is not a TEACHER");
-                }
-            } else {
-                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,
-                        "Authentication required or teacherId must be provided");
-            }
-        } else {
-            if (!AuthUtils.hasRole(auth, "TEACHER")) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "선생님만 토론방을 생성할 수 있습니다.");
-            }
-            teacherId = AuthUtils.getUserId(auth);
-            teacher = userRepository.findByUserId(teacherId)
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
+    public boolean validateTeacher(Authentication auth) {
+        if (auth == null || !AuthUtils.hasRole(auth, "TEACHER")) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "선생님만 접근할 수 있습니다.");
         }
+        return true; // 검증 통과 시 true 반환
+    }
+
+    public DebateRoomResponseDTO createRoom(DebateRoomRequestDTO req, Authentication auth) {
+
+        validateTeacher(auth);
+        
+        UUID teacherId = AuthUtils.getUserId(auth);
+        UserEntity teacher = userRepository.findByUserId(teacherId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
 
         Integer teacherCode = teacher.getTeacherCode();
         UUID roomId = UUID.randomUUID();
@@ -109,6 +97,40 @@ public class DebateService {
                 .createdAt(createdAt)
                 .viewMode("vote")
                 .build();
+    }
+
+    public void deleteRoom(String roomId, Authentication auth) {
+        if (auth == null || !auth.isAuthenticated()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication required");
+        }
+
+        String roomKey = "debate:room:" + roomId;
+        Map<Object, Object> roomMap = redisTemplate.opsForHash().entries(roomKey);
+
+        if (roomMap == null || roomMap.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Room not found");
+        }
+
+        // 권한 확인 (생성한 선생님만 삭제 가능)
+        UUID currentUserId = AuthUtils.getUserId(auth);
+        String teacherIdStr = (String) roomMap.get("teacherId");
+
+        if (teacherIdStr == null || !teacherIdStr.equals(currentUserId.toString())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the creator can delete this room");
+        }
+
+        String teacherCode = (String) roomMap.get("teacherCode");
+
+        // Redis 데이터 삭제
+        redisTemplate.delete(roomKey); // 방정보
+        redisTemplate.delete("debate:room:" + roomId + ":messages"); // 메시지
+        redisTemplate.delete("debate:room:" + roomId + ":status"); // 찬성/반대 상태
+
+        // 목록에서 제거
+        if (teacherCode != null) {
+            String teacherCodeIndexKey = "debate:teacherCode:" + teacherCode + ":rooms";
+            redisTemplate.opsForZSet().remove(teacherCodeIndexKey, roomId);
+        }
     }
 
     public List<DebateRoomResponseDTO> getRoomsByClassCode(
@@ -243,11 +265,11 @@ public class DebateService {
         return DebateStatus.valueOf(v.toString());
     }
 
- 
     public void updateRoomMode(String roomId, String viewMode) {
         String roomKey = "debate:room:" + roomId;
         redisTemplate.opsForHash().put(roomKey, "viewMode", viewMode);
     }
+
     public String resolveNickname(UUID userId, SimpMessageHeaderAccessor headerAccessor) {
         Map<String, Object> session = headerAccessor.getSessionAttributes();
         if (session != null && session.get("sender") != null) {
@@ -255,6 +277,23 @@ public class DebateService {
         }
         String nickname = getNickName(userId);
         return nickname != null ? nickname : "unknown";
+    }
+
+    public List<ChatMessage> getMessages(String roomId) {
+        String key = "debate:room:" + roomId + ":messages";
+        List<String> rawMessages = redisTemplate.opsForList().range(key, 0, -1);
+
+        List<ChatMessage> messages = new ArrayList<>();
+        if (rawMessages != null) {
+            for (String json : rawMessages) {
+                try {
+                    messages.add(objectMapper.readValue(json, ChatMessage.class));
+                } catch (JsonProcessingException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        return messages;
     }
 
     public void appendMessage(String roomId, ChatMessage msg) {
@@ -267,6 +306,19 @@ public class DebateService {
             throw new IllegalStateException("Failed to serialize ChatMessage", e);
         }
     }
+
+    public void deleteRoom(Integer teacherCode, String roomId, Authentication auth) {
+        validateTeacher(auth);
+        
+        String messagesKey = "debate:room:" + roomId + ":messages";
+        String roomKey = "debate:room:" + roomId;
+        String teacherRoomsKey = "debate:teacherCode:" + teacherCode + ":rooms";
+
+        redisTemplate.delete(messagesKey);
+        redisTemplate.delete(roomKey);
+        redisTemplate.opsForZSet().remove(teacherRoomsKey, roomId);
+    }
+
 
     /**
      * 토론 주제 추천 받기

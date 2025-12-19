@@ -25,6 +25,7 @@ import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -47,6 +48,14 @@ public class DebateController {
             Authentication authentication) {
         DebateRoomResponseDTO room = debateService.createRoom(req, authentication);
         return ResponseEntity.ok(room);
+    }
+
+    @org.springframework.web.bind.annotation.DeleteMapping("/room/{roomId}")
+    public ResponseEntity<Void> deleteRoom(
+            @org.springframework.web.bind.annotation.PathVariable("roomId") String roomId,
+            Authentication authentication) {
+        debateService.deleteRoom(roomId, authentication);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/roomList")
@@ -241,12 +250,21 @@ public class DebateController {
     // return chatMessage;
     // }
 
+    @DeleteMapping("/room/{roomId}")
+    public ResponseEntity<Void> deleteRoom(@RequestParam Integer teacherCode, @PathVariable UUID roomId, Authentication authentication) {
+        debateService.deleteRoom(teacherCode, roomId.toString(), authentication);
+
+        messagingTemplate.convertAndSend("/sub/chat/room/" + roomId,
+            Map.of("type", "ROOM_DELETED", "message", "토론이 종료되었습니다."));
+
+        return ResponseEntity.ok().build();
+    }
     /**
      * 토론 주제 추천 API
      * AWS Bedrock Prompt를 통해 한국 역사 토론 주제를 추천받습니다.
      */
     @PostMapping("/topics/recommend")
- 
+
     @MessageMapping("/room/{roomId}/mode")
     public void updateMode(
             @DestinationVariable String roomId,
@@ -254,7 +272,8 @@ public class DebateController {
             Principal principal) {
         // Teacher validation could be added here
         String newMode = payload.get("viewMode");
-        if (newMode == null) return;
+        if (newMode == null)
+            return;
 
         debateService.updateRoomMode(roomId, newMode);
 
@@ -266,6 +285,7 @@ public class DebateController {
 
         messagingTemplate.convertAndSend("/topic/room/" + roomId, out);
     }
+
     public ResponseEntity<com.lgcns.haibackend.discussion.domain.dto.DebateTopicsResponse> recommendTopics(
             @RequestBody com.lgcns.haibackend.discussion.domain.dto.DebateTopicsRequest request) {
         com.lgcns.haibackend.discussion.domain.dto.DebateTopicsResponse response = debateService
