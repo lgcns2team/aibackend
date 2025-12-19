@@ -25,6 +25,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -146,6 +147,33 @@ public class DebateService {
         }
         return result;
     }
+
+    public List<ChatMessage> getMessages(String roomId, int page, int size) {
+        String key = "debate:room:" + roomId + ":messages";
+        int p = Math.max(0, page);
+        int s = Math.max(1, Math.min(size, 200));
+
+        Long totalLong = redisTemplate.opsForList().size(key);
+        long total = (totalLong == null) ? 0 : totalLong;
+        if (total == 0) return List.of();
+
+        long end = total - 1 - ((long) p * s);
+        long start = Math.max(0, end - (s - 1));
+        if (end < 0) return List.of();
+
+        List<String> jsonList = redisTemplate.opsForList().range(key, start, end);
+        if (jsonList == null || jsonList.isEmpty()) return List.of();
+
+        List<ChatMessage> result = new ArrayList<>(jsonList.size());
+        for (String json : jsonList) {
+            try { result.add(objectMapper.readValue(json, ChatMessage.class)); }
+            catch (Exception ignored) {}
+        }
+
+        Collections.reverse(result);
+        return result;
+    }
+
 
     public DebateRoomRequestDTO getRoom(String roomId) {
         return activeRooms.get(roomId);
