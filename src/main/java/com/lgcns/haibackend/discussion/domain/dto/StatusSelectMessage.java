@@ -6,6 +6,5 @@ import lombok.Setter;
 @Getter
 @Setter
 public class StatusSelectMessage {
-    private java.util.UUID userId;
     private DebateStatus status;
 }

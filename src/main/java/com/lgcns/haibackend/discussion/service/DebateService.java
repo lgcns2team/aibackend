@@ -147,12 +147,10 @@ public class DebateService {
     }
 
     public List<DebateRoomResponseDTO> getRoomsByClassCode(
-            Authentication auth, UUID userIdParam) {
+            Authentication auth) {
         UUID userId;
         if (auth != null && auth.isAuthenticated()) {
             userId = AuthUtils.getUserId(auth);
-        } else if (userIdParam != null) {
-            userId = userIdParam;
         } else {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication or userId required");
         }

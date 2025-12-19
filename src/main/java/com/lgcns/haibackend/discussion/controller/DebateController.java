@@ -60,10 +60,9 @@ public class DebateController {
 
     @GetMapping("/roomList")
     public ResponseEntity<List<DebateRoomResponseDTO>> getRoomsByTeacher(
-            Authentication authentication,
-            @RequestParam(required = false) UUID userId) {
+            Authentication authentication) {
         return ResponseEntity.ok(
-                debateService.getRoomsByClassCode(authentication, userId));
+                debateService.getRoomsByClassCode(authentication));
     }
 
     @GetMapping("/room/{roomId}/messages")
@@ -134,7 +133,7 @@ public class DebateController {
             @Payload StatusSelectMessage msg,
             SimpMessageHeaderAccessor headerAccessor,
             Principal principal) {
-        UUID userId = msg.getUserId();
+        UUID userId = AuthUtils.getUserId(principal);
 
         if (userId == null) {
             Map<String, Object> session = headerAccessor.getSessionAttributes();
@@ -145,15 +144,7 @@ public class DebateController {
                 }
             }
         }
-
-        if (userId == null) {
-            try {
-                userId = AuthUtils.getUserId(principal);
-            } catch (Exception e) {
-                // Ignore auth error if we just want to fail later or handle guests
-            }
-        }
-
+        
         if (userId == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User ID not found");
         }
