@@ -110,6 +110,40 @@ public class DebateService {
                 .build();
     }
 
+    public void deleteRoom(String roomId, Authentication auth) {
+        if (auth == null || !auth.isAuthenticated()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication required");
+        }
+
+        String roomKey = "debate:room:" + roomId;
+        Map<Object, Object> roomMap = redisTemplate.opsForHash().entries(roomKey);
+
+        if (roomMap == null || roomMap.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Room not found");
+        }
+
+        // 권한 확인 (생성한 선생님만 삭제 가능)
+        UUID currentUserId = AuthUtils.getUserId(auth);
+        String teacherIdStr = (String) roomMap.get("teacherId");
+
+        if (teacherIdStr == null || !teacherIdStr.equals(currentUserId.toString())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the creator can delete this room");
+        }
+
+        String teacherCode = (String) roomMap.get("teacherCode");
+
+        // Redis 데이터 삭제
+        redisTemplate.delete(roomKey); // 방정보
+        redisTemplate.delete("debate:room:" + roomId + ":messages"); // 메시지
+        redisTemplate.delete("debate:room:" + roomId + ":status"); // 찬성/반대 상태
+
+        // 목록에서 제거
+        if (teacherCode != null) {
+            String teacherCodeIndexKey = "debate:teacherCode:" + teacherCode + ":rooms";
+            redisTemplate.opsForZSet().remove(teacherCodeIndexKey, roomId);
+        }
+    }
+
     public List<DebateRoomResponseDTO> getRoomsByClassCode(
             Authentication auth, UUID userIdParam) {
         UUID userId;
