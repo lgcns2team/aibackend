@@ -21,7 +21,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
-import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.Authentication;
@@ -50,12 +49,20 @@ public class DebateController {
         return ResponseEntity.ok(room);
     }
 
+
+    @DeleteMapping("/room/{roomId}")
+    public ResponseEntity<Void> deleteRoom(
+            @PathVariable("roomId") String roomId,
+            Authentication authentication) {
+        debateService.deleteRoom(roomId, authentication);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/roomList")
     public ResponseEntity<List<DebateRoomResponseDTO>> getRoomsByTeacher(
-            Authentication authentication,
-            @RequestParam(required = false) UUID userId) {
+            Authentication authentication) {
         return ResponseEntity.ok(
-                debateService.getRoomsByClassCode(authentication, userId));
+                debateService.getRoomsByClassCode(authentication));
     }
 
     @GetMapping("/room/{roomId}/messages")
@@ -65,6 +72,10 @@ public class DebateController {
             @RequestParam(defaultValue = "50") int size,
             Authentication auth
     ) {
+        if (auth == null || !auth.isAuthenticated()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication required");
+        }
+
         UUID userId = AuthUtils.getUserId(auth);
         debateService.validateJoin(roomId, userId);
 
@@ -122,7 +133,7 @@ public class DebateController {
             @Payload StatusSelectMessage msg,
             SimpMessageHeaderAccessor headerAccessor,
             Principal principal) {
-        UUID userId = msg.getUserId();
+        UUID userId = AuthUtils.getUserId(principal);
 
         if (userId == null) {
             Map<String, Object> session = headerAccessor.getSessionAttributes();
@@ -133,15 +144,7 @@ public class DebateController {
                 }
             }
         }
-
-        if (userId == null) {
-            try {
-                userId = AuthUtils.getUserId(principal);
-            } catch (Exception e) {
-                // Ignore auth error if we just want to fail later or handle guests
-            }
-        }
-
+        
         if (userId == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User ID not found");
         }
@@ -175,25 +178,9 @@ public class DebateController {
     public void sendMessage(
             @DestinationVariable String roomId,
             @Payload ChatMessage incoming,
-            SimpMessageHeaderAccessor headerAccessor) {
+            SimpMessageHeaderAccessor headerAccessor,
+            Principal principal) {
         UUID userId = incoming.getUserId();
-
-        // if (userId == null) {
-        //     Map<String, Object> session = headerAccessor.getSessionAttributes();
-        //     if (session != null && session.containsKey("userId")) {
-        //         try {
-        //             userId = UUID.fromString((String) session.get("userId"));
-        //         } catch (Exception e) {
-        //         }
-        //     }
-        // }
-
-        // if (userId == null) {
-        //     try {
-        //         userId = AuthUtils.getUserId(principal);
-        //     } catch (Exception e) {
-        //     }
-        // }
 
         if (userId == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User ID not found");
@@ -220,37 +207,6 @@ public class DebateController {
         messagingTemplate.convertAndSend("/topic/room/" + roomId, out);
     }
 
-    // @MessageMapping("/chat.sendMessage/{roomId}")
-    // @SendTo("/topic/room/{roomId}")
-    // public ChatMessage sendMessage(@DestinationVariable String roomId, @Payload
-    // ChatMessage chatMessage) {
-    // return chatMessage;
-    // }
-
-    // @MessageMapping("/chat.addUser/{roomId}")
-    // @SendTo("/topic/room/{roomId}")
-    // public ChatMessage addUser(@DestinationVariable String roomId, @Payload
-    // ChatMessage chatMessage,
-    // SimpMessageHeaderAccessor headerAccessor) {
-    // // Validate join logic
-    // debateService.validateJoin(roomId, chatMessage.getUserId());
-
-    // // Add username and roomId in web socket session
-    // headerAccessor.getSessionAttributes().put("username",
-    // chatMessage.getSender());
-    // headerAccessor.getSessionAttributes().put("roomId", roomId);
-    // return chatMessage;
-    // }
-
-    @DeleteMapping("/room/{roomId}")
-    public ResponseEntity<Void> deleteRoom(@RequestParam Integer teacherCode, @PathVariable UUID roomId, Authentication authentication) {
-        debateService.deleteRoom(teacherCode, roomId.toString(), authentication);
-
-        messagingTemplate.convertAndSend("/sub/chat/room/" + roomId,
-            Map.of("type", "ROOM_DELETED", "message", "토론이 종료되었습니다."));
-
-        return ResponseEntity.ok().build();
-    }
     /**
      * 토론 주제 추천 API
      * AWS Bedrock Prompt를 통해 한국 역사 토론 주제를 추천받습니다.
