@@ -49,7 +49,6 @@ public class DebateController {
         return ResponseEntity.ok(room);
     }
 
-
     @DeleteMapping("/room/{roomId}")
     public ResponseEntity<Void> deleteRoom(
             @PathVariable("roomId") String roomId,
@@ -70,8 +69,7 @@ public class DebateController {
             @PathVariable String roomId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size,
-            Authentication auth
-    ) {
+            Authentication auth) {
         if (auth == null || !auth.isAuthenticated()) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication required");
         }
@@ -81,7 +79,6 @@ public class DebateController {
 
         return ResponseEntity.ok(debateService.getMessages(roomId, page, size));
     }
-
 
     @MessageMapping("/room/{roomId}/join")
     public void join(
@@ -144,7 +141,7 @@ public class DebateController {
                 }
             }
         }
-        
+
         if (userId == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User ID not found");
         }
@@ -205,13 +202,7 @@ public class DebateController {
 
         debateService.appendMessage(roomId, out);
         messagingTemplate.convertAndSend("/topic/room/" + roomId, out);
-    }
-
-    /**
-     * 토론 주제 추천 API
-     * AWS Bedrock Prompt를 통해 한국 역사 토론 주제를 추천받습니다.
-     */
-    @PostMapping("/topics/recommend")
+    }    
 
     @MessageMapping("/room/{roomId}/mode")
     public void updateMode(
@@ -234,6 +225,11 @@ public class DebateController {
         messagingTemplate.convertAndSend("/topic/room/" + roomId, out);
     }
 
+    /**
+     * 토론 주제 추천 API
+     * AWS Bedrock Prompt를 통해 한국 역사 토론 주제를 추천받습니다.
+     */
+    @PostMapping("/topics/recommend")
     public ResponseEntity<com.lgcns.haibackend.discussion.domain.dto.DebateTopicsResponse> recommendTopics(
             @RequestBody com.lgcns.haibackend.discussion.domain.dto.DebateTopicsRequest request) {
         com.lgcns.haibackend.discussion.domain.dto.DebateTopicsResponse response = debateService

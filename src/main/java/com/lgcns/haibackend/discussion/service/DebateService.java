@@ -53,12 +53,9 @@ public class DebateService {
 
     public boolean isTeacher(UUID userId) {
         UserEntity user = userRepository.findByUserId(userId)
-                .orElseThrow(() ->
-                        new ResponseStatusException(
-                                HttpStatus.UNAUTHORIZED,
-                                "User not found: " + userId
-                        )
-                );
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.UNAUTHORIZED,
+                        "User not found: " + userId));
 
         return user.getRole() == Role.TEACHER;
     }
@@ -73,7 +70,7 @@ public class DebateService {
 
         UUID userId = AuthUtils.getUserId(auth);
         validateTeacher(userId);
-        
+
         UUID teacherId = AuthUtils.getUserId(auth);
         UserEntity teacher = userRepository.findByUserId(teacherId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
@@ -192,25 +189,29 @@ public class DebateService {
 
         Long totalLong = redisTemplate.opsForList().size(key);
         long total = (totalLong == null) ? 0 : totalLong;
-        if (total == 0) return List.of();
+        if (total == 0)
+            return List.of();
 
         long end = total - 1 - ((long) p * s);
         long start = Math.max(0, end - (s - 1));
-        if (end < 0) return List.of();
+        if (end < 0)
+            return List.of();
 
         List<String> jsonList = redisTemplate.opsForList().range(key, start, end);
-        if (jsonList == null || jsonList.isEmpty()) return List.of();
+        if (jsonList == null || jsonList.isEmpty())
+            return List.of();
 
         List<ChatMessage> result = new ArrayList<>(jsonList.size());
         for (String json : jsonList) {
-            try { result.add(objectMapper.readValue(json, ChatMessage.class)); }
-            catch (Exception ignored) {}
+            try {
+                result.add(objectMapper.readValue(json, ChatMessage.class));
+            } catch (Exception ignored) {
+            }
         }
 
         Collections.reverse(result);
         return result;
     }
-
 
     public DebateRoomRequestDTO getRoom(String roomId) {
         return activeRooms.get(roomId);
@@ -241,11 +242,11 @@ public class DebateService {
         if (userInfo.getTeacherCode() == null) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No teacher code");
         }
-        
+
         if (!userInfo.getTeacherCode().toString().equals(roomTeacherCode)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not in this class");
         }
-        
+
         boolean teacher = isTeacher(userId);
         if (!teacher) {
             if (roomGrade != null) {
@@ -331,7 +332,7 @@ public class DebateService {
     public void deleteRoom(Integer teacherCode, String roomId, Authentication auth) {
         UUID userId = AuthUtils.getUserId(auth);
         validateTeacher(userId);
-        
+
         String messagesKey = "debate:room:" + roomId + ":messages";
         String roomKey = "debate:room:" + roomId;
         String teacherRoomsKey = "debate:teacherCode:" + teacherCode + ":rooms";
@@ -340,7 +341,6 @@ public class DebateService {
         redisTemplate.delete(roomKey);
         redisTemplate.opsForZSet().remove(teacherRoomsKey, roomId);
     }
-
 
     /**
      * 토론 주제 추천 받기
@@ -382,6 +382,7 @@ public class DebateService {
     public DebateSummaryResponse getDebateAnalysis(String roomId) {
         // 1. 채팅 내역 가져오기
         List<ChatMessage> messages = getMessages(roomId);
+        System.err.println("messages !!!!!!: " + messages);
         if (messages == null || messages.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "분석할 대화 내용이 없습니다.");
         }
