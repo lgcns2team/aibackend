@@ -21,7 +21,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
-import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.Authentication;
@@ -48,6 +47,15 @@ public class DebateController {
             Authentication authentication) {
         DebateRoomResponseDTO room = debateService.createRoom(req, authentication);
         return ResponseEntity.ok(room);
+    }
+
+
+    @DeleteMapping("/room/{roomId}")
+    public ResponseEntity<Void> deleteRoom(
+            @PathVariable("roomId") String roomId,
+            Authentication authentication) {
+        debateService.deleteRoom(roomId, authentication);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/roomList")
