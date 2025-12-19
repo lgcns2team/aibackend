@@ -56,6 +56,7 @@ public class DebateController {
         return ResponseEntity.ok(room);
     }
 
+
     @DeleteMapping("/room/{roomId}")
     public ResponseEntity<Void> deleteRoom(
             @PathVariable("roomId") String roomId,
@@ -285,5 +286,11 @@ public class DebateController {
         com.lgcns.haibackend.discussion.domain.dto.DebateTopicsResponse response = debateService
                 .getDebateTopicRecommendations(request);
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/room/{roomId}/analyze")
+    public ResponseEntity<com.lgcns.haibackend.discussion.domain.dto.DebateSummaryResponse> analyzeDebate(
+            @org.springframework.web.bind.annotation.PathVariable("roomId") String roomId) {
+        return ResponseEntity.ok(debateService.getDebateAnalysis(roomId));
     }
 }

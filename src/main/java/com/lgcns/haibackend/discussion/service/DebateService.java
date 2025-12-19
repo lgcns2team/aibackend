@@ -10,6 +10,7 @@ import com.lgcns.haibackend.discussion.domain.dto.DebateRoomResponseDTO;
 import com.lgcns.haibackend.discussion.domain.dto.DebateStatus;
 import com.lgcns.haibackend.discussion.domain.dto.DebateTopicsRequest;
 import com.lgcns.haibackend.discussion.domain.dto.DebateTopicsResponse;
+import com.lgcns.haibackend.discussion.domain.dto.DebateSummaryResponse;
 import com.lgcns.haibackend.user.domain.entity.UserClassInfo;
 import com.lgcns.haibackend.user.domain.entity.UserEntity;
 import com.lgcns.haibackend.user.repository.UserRepository;
@@ -40,6 +41,9 @@ public class DebateService {
 
     @Value("${aws.bedrock.prompt.debate-topic}")
     private String debateTopicPromptId;
+
+    @Value("${aws.bedrock.prompt.debate-summary}")
+    private String debateSummaryPromptId;
 
     private final UserRepository userRepository;
     private final RedisTemplate<String, String> redisTemplate;
@@ -374,4 +378,57 @@ public class DebateService {
                     "AI 응답을 파싱하는 중 오류가 발생했습니다: " + e.getMessage());
         }
     }
+
+    public DebateSummaryResponse getDebateAnalysis(String roomId) {
+        // 1. 채팅 내역 가져오기
+        List<ChatMessage> messages = getMessages(roomId);
+        if (messages == null || messages.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "분석할 대화 내용이 없습니다.");
+        }
+
+        // 2. 대화 내용 포맷팅
+        StringBuilder sb = new StringBuilder();
+        for (ChatMessage msg : messages) {
+            if (msg.getType() == ChatMessage.MessageType.CHAT) {
+                String status = msg.getStatus() != null ? msg.getStatus().name() : "NONE";
+                sb.append(String.format("[%s (%s)]: %s\n", msg.getSender(), status, msg.getContent()));
+            }
+        }
+        String chatHistory = sb.toString();
+
+        if (chatHistory.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "분석할 대화 내용이 없습니다 (채팅 메시지 없음).");
+        }
+
+        // 3. PromptRequest 생성
+        com.lgcns.haibackend.aiPerson.domain.dto.PromptRequest promptRequest = com.lgcns.haibackend.aiPerson.domain.dto.PromptRequest
+                .builder()
+                .promptId(debateSummaryPromptId)
+                .userQuery(chatHistory)
+                .build();
+
+        // 4. AI 응답 받기
+        String completeResponse = fastApiClient.chatPromptStream(promptRequest)
+                .collectList()
+                .map(chunks -> String.join("", chunks))
+                .block();
+
+        System.out.println("=== SUMMARY RESPONSE ===");
+        System.out.println(completeResponse);
+        System.out.println("=== END RESPONSE ===");
+
+        if (completeResponse == null || completeResponse.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "AI 분석 응답을 받지 못했습니다.");
+        }
+
+        // 5. JSON 파싱
+        try {
+            return objectMapper.readValue(completeResponse,
+                    com.lgcns.haibackend.discussion.domain.dto.DebateSummaryResponse.class);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "AI 응답 파싱 실패: " + e.getMessage());
+        }
+    }
+
 }

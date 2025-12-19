@@ -50,6 +50,7 @@ aws:
     prompt:
       debate-topic: ${AWS_BEDROCK_DEBATE_TOPICS_PROMPT_ARN}
       ai-person: ${AWS_BEDROCK_AI_PERSON_PROMPT_ARN:arn:aws:bedrock:ap-northeast-2:811221506617:prompt/VJQKBMTQM2}
+      debate-summary: ${AWS_BEDROCK_DEBATE_SUMMARY_PROMPT_ARN}
 
 fastapi:
   base-url: ${FASTAPI_BASE_URL:http://localhost:8000}
