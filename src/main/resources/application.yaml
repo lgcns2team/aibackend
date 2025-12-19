@@ -49,12 +49,15 @@ aws:
       model-arn: ${AWS_BEDROCK_KB_MODEL_ARN}
     prompt:
       debate-topic: ${AWS_BEDROCK_DEBATE_TOPICS_PROMPT_ARN}
+      ai-person: ${AWS_BEDROCK_AI_PERSON_PROMPT_ARN:arn:aws:bedrock:ap-northeast-2:811221506617:prompt/VJQKBMTQM2}
 
 fastapi:
   base-url: ${FASTAPI_BASE_URL:http://localhost:8000}
 
 server:
   port: ${SERVER_PORT}
+  error:
+    include-message: always
 
 jwt:
   secret: ${JWT_SECRET_KEY}

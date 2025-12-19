@@ -23,6 +23,7 @@ public class DebateRoomResponseDTO {
     private String topicTitle;
     private String topicDescription;
     private LocalDateTime createdAt;
+    private String viewMode;
 
     public static DebateRoomResponseDTO from(Map<Object, Object> map) {
     return DebateRoomResponseDTO.builder()
@@ -32,6 +33,7 @@ public class DebateRoomResponseDTO {
             .participantCount(Integer.parseInt((String) map.getOrDefault("participantCount", "0")))
             .topicTitle((String) map.get("topicTitle"))
             .topicDescription((String) map.get("topicDescription"))
+            .viewMode((String) map.getOrDefault("viewMode", "vote"))
             .createdAt(LocalDateTime.parse((String) map.get("createdAt")))
             .build();
 }

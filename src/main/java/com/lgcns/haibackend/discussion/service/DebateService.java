@@ -56,11 +56,6 @@ public class DebateService {
 
         validateTeacher(auth);
 
-        UUID teacherId = AuthUtils.getUserId(auth);
-
-        UserEntity teacher = userRepository.findByUserId(teacherId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
-
         Integer teacherCode = teacher.getTeacherCode();
         UUID roomId = UUID.randomUUID();
         LocalDateTime createdAt = LocalDateTime.now();
@@ -76,6 +71,7 @@ public class DebateService {
         roomMap.put("topicDescription", req.getTopicDescription());
         roomMap.put("participantCount", req.getParticipantCount().toString());
         roomMap.put("createdAt", createdAt.toString());
+        roomMap.put("viewMode", "vote");
 
         redisTemplate.opsForHash().putAll(roomKey, roomMap);
 
@@ -87,24 +83,66 @@ public class DebateService {
                 createdAt.atZone(ZoneId.systemDefault()).toEpochSecond());
 
         return DebateRoomResponseDTO.builder()
-                        .roomId(roomId)
-                        .teacherId(teacherId)
-                        .teacherCode(teacherCode)
-                        .participantCount(req.getParticipantCount())
-                        .topicTitle(req.getTopicTitle())
-                        .topicDescription(req.getTopicDescription())
-                        .createdAt(createdAt)
-                        .build();
+                .roomId(roomId)
+                .teacherId(teacherId)
+                .teacherCode(teacherCode)
+                .participantCount(req.getParticipantCount())
+                .topicTitle(req.getTopicTitle())
+                .topicDescription(req.getTopicDescription())
+                .createdAt(createdAt)
+                .viewMode("vote")
+                .build();
+    }
+
+    public void deleteRoom(String roomId, Authentication auth) {
+        if (auth == null || !auth.isAuthenticated()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication required");
+        }
+
+        String roomKey = "debate:room:" + roomId;
+        Map<Object, Object> roomMap = redisTemplate.opsForHash().entries(roomKey);
+
+        if (roomMap == null || roomMap.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Room not found");
+        }
+
+        // 권한 확인 (생성한 선생님만 삭제 가능)
+        UUID currentUserId = AuthUtils.getUserId(auth);
+        String teacherIdStr = (String) roomMap.get("teacherId");
+
+        if (teacherIdStr == null || !teacherIdStr.equals(currentUserId.toString())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the creator can delete this room");
+        }
+
+        String teacherCode = (String) roomMap.get("teacherCode");
+
+        // Redis 데이터 삭제
+        redisTemplate.delete(roomKey); // 방정보
+        redisTemplate.delete("debate:room:" + roomId + ":messages"); // 메시지
+        redisTemplate.delete("debate:room:" + roomId + ":status"); // 찬성/반대 상태
+
+        // 목록에서 제거
+        if (teacherCode != null) {
+            String teacherCodeIndexKey = "debate:teacherCode:" + teacherCode + ":rooms";
+            redisTemplate.opsForZSet().remove(teacherCodeIndexKey, roomId);
+        }
     }
 
     public List<DebateRoomResponseDTO> getRoomsByClassCode(
-            Authentication auth) {
-        UUID userId = AuthUtils.getUserId(auth);
+            Authentication auth, UUID userIdParam) {
+        UUID userId;
+        if (auth != null && auth.isAuthenticated()) {
+            userId = AuthUtils.getUserId(auth);
+        } else if (userIdParam != null) {
+            userId = userIdParam;
+        } else {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication or userId required");
+        }
+
         UserEntity user = userRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
 
         Integer teacherCode = user.getTeacherCode();
-
 
         String classIndexKey = "debate:teacherCode:" + teacherCode + ":rooms";
         Set<String> roomIds = redisTemplate.opsForZSet()
@@ -147,6 +185,11 @@ public class DebateService {
         }
 
         UserClassInfo userInfo = userRepository.findClassInfoByUserId(userId);
+        if (userInfo == null) {
+            // Guest user or user not found - Allow for now or handle differently
+            return;
+        }
+
         if (userInfo.getTeacherCode() == null) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No teacher code");
         }
@@ -160,7 +203,7 @@ public class DebateService {
         }
 
         if (roomClassroom != null && userInfo.getClassroom() != null
-            && !roomClassroom.equals(userInfo.getClassroom().toString())) {
+                && !roomClassroom.equals(userInfo.getClassroom().toString())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Classroom mismatch");
         }
     }
@@ -175,19 +218,24 @@ public class DebateService {
     }
 
     public DebateStatus requireStatusSelected(String roomId, UUID userId, SimpMessageHeaderAccessor headerAccessor) {
-    // 세션에 있으면 우선 사용
-    Map<String, Object> session = headerAccessor.getSessionAttributes();
-    if (session != null && session.get("status") != null) {
-        return DebateStatus.valueOf(session.get("status").toString());
+        // 세션에 있으면 우선 사용
+        Map<String, Object> session = headerAccessor.getSessionAttributes();
+        if (session != null && session.get("status") != null) {
+            return DebateStatus.valueOf(session.get("status").toString());
+        }
+
+        // Redis에서 확인
+        String key = "debate:room:" + roomId + ":status";
+        Object v = redisTemplate.opsForHash().get(key, userId.toString());
+        if (v == null) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Select PRO/CON first");
+        }
+        return DebateStatus.valueOf(v.toString());
     }
 
-    // Redis에서 확인
-    String key = "debate:room:" + roomId + ":status";
-    Object v = redisTemplate.opsForHash().get(key, userId.toString());
-    if (v == null) {
-        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Select PRO/CON first");
-    }
-    return DebateStatus.valueOf(v.toString());
+    public void updateRoomMode(String roomId, String viewMode) {
+        String roomKey = "debate:room:" + roomId;
+        redisTemplate.opsForHash().put(roomKey, "viewMode", viewMode);
     }
 
     public String resolveNickname(UUID userId, SimpMessageHeaderAccessor headerAccessor) {
@@ -197,6 +245,23 @@ public class DebateService {
         }
         String nickname = getNickName(userId);
         return nickname != null ? nickname : "unknown";
+    }
+
+    public List<ChatMessage> getMessages(String roomId) {
+        String key = "debate:room:" + roomId + ":messages";
+        List<String> rawMessages = redisTemplate.opsForList().range(key, 0, -1);
+
+        List<ChatMessage> messages = new ArrayList<>();
+        if (rawMessages != null) {
+            for (String json : rawMessages) {
+                try {
+                    messages.add(objectMapper.readValue(json, ChatMessage.class));
+                } catch (JsonProcessingException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        return messages;
     }
 
     public void appendMessage(String roomId, ChatMessage msg) {

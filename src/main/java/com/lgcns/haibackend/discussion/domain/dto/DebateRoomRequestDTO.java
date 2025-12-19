@@ -9,7 +9,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 
-
 @Getter
 @Setter
 @Builder
@@ -23,5 +22,6 @@ public class DebateRoomRequestDTO {
     private String topicDescription;
     private Integer grade;
     private Integer classroom;
+    private UUID teacherId;
 
 }

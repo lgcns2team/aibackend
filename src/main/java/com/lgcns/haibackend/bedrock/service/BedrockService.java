@@ -12,7 +12,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
-import java.util.List;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -25,8 +25,9 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class BedrockService {
-        // redischatrepository 주입
+        
         private final RedisChatRepository redisChatRepository;
+        private final FastApiClient fastApiClient;
 
         @Value("${aws.bedrock.knowledge-base.id}")
         private String knowledgeBaseId;
@@ -37,44 +38,27 @@ public class BedrockService {
         @Value("${aws.bedrock.model.chat}")
         private String chatModelName;
 
-        private final FastApiClient fastApiClient;
-
-        // // redis key관련 상수 및 key 생성 로직 추가
-        // private static final String CHATBOT_KEY_PREFIX = "chatbot:chat:";
-
         private String getChatbotKey(UUID userId) {
                 return "chatbot:chat:" + userId;
         }
 
         /**
          * Knowledge Base 검색 - 스트리밍
-         * 이 메서드를 사용하세요!
          */
         public Flux<String> retrieveFromKnowledgeBase(String query, UUID userId) {
                 String redisKey = getChatbotKey(userId);
 
-                // log.info("[RAG] Starting RAG stream for UserID: {}", userId);
-
-                // 1. 대화 기록(History) 불러오기 (Redis)
-                // List<Message> history = redisChatRepository.getMessages(redisKey);
-                // log.debug("[RAG] Loaded History Size: {}", history.size());
-
-                // 2. 사용자 메시지를 Redis에 먼저 저장 (History Append - User Message)
                 MessageDTO userMessage = MessageDTO.user(query);
                 redisChatRepository.appendMessage(redisKey, userMessage);
 
-                // 3. KnowledgeBaseRequest에 History 포함하여 요청 생성
                 KnowledgeBaseRequest request = KnowledgeBaseRequest.builder()
                                 .query(query)
                                 .kbId(knowledgeBaseId)
                                 .modelArn(knowledgeBaseModelArn)
-                                //.history(history)
                                 .build();
 
-                // 4. FastAPI 호출 (응답 스트림)
                 return fastApiClient.retrieveFromKnowledgeBaseStream(request)
                                 .collect(Collectors.joining())
-                                // 5. 응답 완료 후 로직 수행 (History Append - AI Message)
                                 .doOnSuccess(fullResponse -> {
                                         log.info("[RAG] Stream completed. Saving response to Redis.");
                                         MessageDTO aiMessage = MessageDTO.assistant(fullResponse);
@@ -84,11 +68,11 @@ public class BedrockService {
                                         log.error("[RAG ERROR] Stream failed for UserID: {}, Error: {}", userId,
                                                         error.getMessage());
                                 })
-                                // 6. Mono<String>을 다시 Flux<String>으로 변환하여 스트리밍
                                 .flatMapMany(response -> {
                                         return Flux.just(response);
                                 });
         }
+
         /**
          * FastAPI 게이트웨이 상태 확인
          */
@@ -97,19 +81,42 @@ public class BedrockService {
         }
 
         /**
-         * Bedrock Prompt (프롬프트 관리 기능) 기반 채팅
-         * ✅ 수정: 실시간 스트리밍 지원 + 상세 로그 추가
+         * Bedrock Prompt 기반 채팅 - 변수 없이 (기존 호환성 유지)
          */
         public Flux<String> chatWithPrompt(String promptId, String userQuery) {
+                return chatWithPrompt(promptId, userQuery, null);
+        }
+
+        /**
+         * Bedrock Prompt 기반 채팅 - 변수 포함 ⭐ 새로 추가
+         * 
+         * @param promptId 프롬프트 ID
+         * @param userQuery 사용자 질문
+         * @param variables 프롬프트 변수 (name, era, summary 등)
+         * @return 스트리밍 응답
+         */
+        public Flux<String> chatWithPrompt(String promptId, String userQuery, Map<String, String> variables) {
                 log.info("🚀 [AIPERSON PROMPT CHAT START] promptId={}, query={}", promptId, userQuery);
                 
-                PromptRequest request = PromptRequest.builder()
+                if (variables != null && !variables.isEmpty()) {
+                        log.info("📋 [AIPERSON VARIABLES] {}", variables);
+                }
+
+                // PromptRequest 생성
+                PromptRequest.PromptRequestBuilder builder = PromptRequest.builder()
                                 .promptId(promptId)
-                                .userQuery(userQuery)
-                                .build();
+                                .userQuery(userQuery);
+                
+                // 변수가 있으면 추가
+                if (variables != null && !variables.isEmpty()) {
+                        builder.variables(variables);
+                } else {
+                        builder.variables(new HashMap<>());
+                }
+
+                PromptRequest request = builder.build();
 
                 return fastApiClient.chatPromptStream(request)
-                                // ✅ 각 청크를 실시간으로 전달 (collect 제거)
                                 .doOnNext(chunk -> {
                                         log.debug("📦 [AIPERSON CHUNK RECEIVED] length={}, preview={}", 
                                                 chunk.length(), 

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
 import lombok.Data;
 
+import java.util.HashMap;
 import java.util.Map;
 
 @Data
@@ -14,5 +15,8 @@ public class PromptRequest {
 
     @JsonProperty("user_query")
     private String userQuery;
+
+    @Builder.Default
+    private Map<String, String> variables = new HashMap<>();
 
 }
