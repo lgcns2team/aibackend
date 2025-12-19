@@ -62,7 +62,7 @@
       }
 
       // same-origin: 백엔드(8081)에서 열린 페이지면 /ws-stomp가 백엔드로 감
-      const socket = new SockJS('/ws-stomp');
+      const socket = new SockJS('/api/ai/ws-stomp');
 
       client = new StompJs.Client({
         webSocketFactory: () => socket,

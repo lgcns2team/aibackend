@@ -94,8 +94,17 @@ public class DebateController {
                 // Ignore invalid UUID
             }
         }
+        // Fallback: try getting from Principal (may be null in WebSocket context)
+        if (userId == null && principal != null) {
+            try {
+                userId = AuthUtils.getUserId(principal);
+            } catch (Exception e) {
+                // Principal is null or invalid, ignore
+            }
+        }
+
         if (userId == null) {
-            userId = AuthUtils.getUserId(principal);
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User ID not found in payload or principal");
         }
 
         debateService.validateJoin(roomId, userId);
@@ -130,14 +139,17 @@ public class DebateController {
             @Payload StatusSelectMessage msg,
             SimpMessageHeaderAccessor headerAccessor,
             Principal principal) {
-        UUID userId = AuthUtils.getUserId(principal);
+        // First try to get userId from message payload
+        UUID userId = msg.getUserId();
 
+        // Fallback to session attributes
         if (userId == null) {
             Map<String, Object> session = headerAccessor.getSessionAttributes();
             if (session != null && session.containsKey("userId")) {
                 try {
                     userId = UUID.fromString((String) session.get("userId"));
                 } catch (Exception e) {
+                    // Ignore
                 }
             }
         }
@@ -202,7 +214,7 @@ public class DebateController {
 
         debateService.appendMessage(roomId, out);
         messagingTemplate.convertAndSend("/topic/room/" + roomId, out);
-    }    
+    }
 
     @MessageMapping("/room/{roomId}/mode")
     public void updateMode(

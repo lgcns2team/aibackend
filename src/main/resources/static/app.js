@@ -47,7 +47,7 @@ function connect() {
 
   // 서버 설정에 맞게 endpoint 수정 필요:
   // 예: SockJS("http://localhost:8080/ws") 라면 거기에 맞추기
-  var socket = new SockJS('http://localhost:8081/ws-stomp');
+  var socket = new SockJS('/api/ai/ws-stomp');
   stompClient = Stomp.over(socket);
 
   // (선택) stompClient.debug = null; // 콘솔 로그 줄이기
