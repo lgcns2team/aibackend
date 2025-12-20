@@ -110,6 +110,8 @@ public class DebateService {
                 .topicDescription(req.getTopicDescription())
                 .createdAt(createdAt)
                 .viewMode("vote")
+                .grade(req.getGrade())
+                .classroom(req.getClassroom())
                 .build();
     }
 
